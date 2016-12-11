@@ -12,8 +12,6 @@ import sys
 import numpy as np
 from struct import unpack, unpack_from, pack
 from email.mime.text import MIMEText
-from theano.compile.io import Out
-from tornado.process import Subprocess
 
 def replace(file_path, pattern, subst):
     #Create temp file
@@ -33,42 +31,47 @@ def initiate_logger(outputDirectory, testRevision, dhptVersion ,write2file=False
         os.makedirs(outputDirectory)
     
     dhpt = "DHPTX.X"
-    if dhptVersion == 1.0:
+    if dhptVersion == "1.0":
         dhpt = "DHPT1.0"
-    elif dhptVersion == 1.1:
+    elif dhptVersion == "1.1":
         dhpt = "DHPT1.1"
+    elif dhptVersion == "1.2a":
+        dhpt = "DHPT1.2a"
+    elif dhptVersion == "1.2b":
+        dhpt = "DHPT1.2b"
     else: 
-        logging.error("DHPT VERSION %s IS UNKNOWN!!", dhpt)
-
+        logger.error("DHPT VERSION %s IS UNKNOWN!!", dhpt)
+        sys.exit(-1)
+        
     logger = logging.getLogger("DHPT Probe software")
     logger.setLevel(logging.DEBUG)
     
     dhptID = open("/home/user/NeedleCardTest/Data/" + dhpt + "/dhptID.id", "rw")
     chipID = dhptID.read()
-    logging.info("SOFTWARE REVISION %s - (%s/%s by Leonard Germic, SiLab/Uni Bonn)"%(testRevision, time.localtime().tm_year, time.localtime().tm_mon))
-    
+
     '''
     Output to the console
     '''
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
+    handler1 = logging.StreamHandler()
+    handler1.setLevel(logging.DEBUG)
     formatter = logging.Formatter("%(levelname)s\t %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    handler1.setFormatter(formatter)
+    logger.addHandler(handler1)
     
     '''
     Output to the LogFile
     '''
     if write2file:
-        handler = logging.FileHandler(os.path.join(outputDirectory, "chip_%s.log"%chipID), 'w', encoding=None, delay="true")
-        handler.setLevel(logging.INFO)
-        formatter = logging.Formatter("%(levelname)s - %(message)s")
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        handler2 = logging.FileHandler(os.path.join(outputDirectory, "chip_%s.log"%chipID), 'w', encoding=None, delay="true")
+        handler2.setLevel(logging.DEBUG)
+        handler2.setFormatter(formatter)
+        logger.addHandler(handler2)
         
         logger.info("CHIP ID %s",chipID)
-        replace("/home/user/NeedleCardTest/Data/dhptID.id", chipID, "%d"%(int(chipID)+1))
-        
+        replace("/home/user/NeedleCardTest/Data/" + dhpt + "/dhptID.id", chipID, "%d"%(int(chipID)+1))
+   
+    logger.info("SOFTWARE REVISION %s - (%s/%s by Leonard Germic, SiLab/Uni Bonn)"%(testRevision, time.localtime().tm_year, time.localtime().tm_mon))
+      
     return logger
     
 def query_dict(nested_dict):
@@ -234,4 +237,15 @@ def updatePortInYaml(filename):
     
     with open(filename, 'w') as yaml_file:
         yaml_file.write(yaml.dump(dictObj, default_flow_style=True))
+        
+def printProgress(it, tot, prefix='Progress:', suffix='Complete', decimals=0, barLen=50):
+    formatStr = "{0:." + str(decimals) + "f}"
+    percent = formatStr.format(100*(it/float(tot)))
+    filledLen = int(round(barLen*it/float(tot)))
+    bar = '|' * filledLen + '-' * (barLen-filledLen)
+    sys.stdout.write('\r %s |%s| %s%s %s' % (prefix,bar,percent, '%', suffix)),
+    if it==tot:
+        sys.stdout.write('\n')
+    sys.stdout.flush()
+                  
     

@@ -1,10 +1,11 @@
 from epics import get_pv
-import slowcontrol 
-from probecard import PPROBECARD
-from dhh import mapping
-from pyDepfetReader.file import_reader import FileReader
-import logger
+from slowcontrol import *
+from Probecard import PROBECARD
+#from dhh import mapping
+#from pyDepfetReader.file_reader import FileReader
+from misc import initiate_logger, printProgress
 from basil.dut import Dut
+from __builtin__ import True
 
 
 class SlowControl(object):
@@ -63,7 +64,7 @@ class SlowControl(object):
                             if pvname not in excludedRegs and pv.pvSet.connected:
                                 max_val = pow(2,pv.size)-1 
                                 result = result + abs(max_val - pv.pvGet.get())
-                                #logging.info("Set max value %d"%max_val)
+                                #logger.info("Set max value %d"%max_val)
                             else:
                                 pass         
                                     
@@ -101,13 +102,13 @@ class SlowControl(object):
                                 if v not in excludedRegs and v.pvGet.connected:
                                     logging.info("Checking pv %s"%pvname)
                                     result = result + v.pvGet.get()
-                                    #logging.info("Set max value %d"%max_val)
+                                    #logger.info("Set max value %d"%max_val)
                         else:   
                             if pvname not in excludedRegs and pv.pvGet.connected:
                                 logging.info("Checking pv %s"%pvname)
                                 max_val = pow(2,pv.size)-1 
                                 result = result + pv.pvGet.get()
-                                #logging.info("Set max value %d"%max_val)
+                                #logger.info("Set max value %d"%max_val)
                             else:
                                 pass                             
         stop =time.time()                    
@@ -192,69 +193,158 @@ class SlowControl(object):
 class DHPTMP(PROBECARD):
     def __init__(self, config, logFileDir, softwareVersion, dhptVersion):
         self.fileDir    = logFileDir
-        self.psu1       = Dut("dut1_ttiql335tp_pyvisa.yaml")
-        self.psu2       = Dut("dut2_ttiql335tp_pyvisa.yaml")
-        
+        self.psu1       = Dut("dut1_ttiql335tp_pyserial.yaml")
+        self.psu2       = Dut("dut2_ttiql335tp_pyserial.yaml")
+
+        self.vdd = 0.0  
+        self.dvdd = 0.0
         self.sc         = SlowControl()
   
-        logger.initiate_logger(logFileDir, softwareVersion, dhptVersion, True)
-        PROBECARD.__init__(self, config)
+        self.logger = initiate_logger(logFileDir, softwareVersion, dhptVersion, True)
+        #PROBECARD.__init__(self, config)
         self.psu1.init()
         self.psu2.init()
-        
-    def set_VDD_voltage(self, ch=0, v=1200, u="mV"):
-        val= 1200
-        if (u == "mV"):
-            if (v>900) and (v<1500):
-                pass
-            elif v<900:
-                val = 900
-            elif v>1500:
-                val = 1500
-                           
-        self.psu1["PowerSupply"].set_voltage(val, unit=u, channel=ch)
-
-    def set_DVDD_voltage(self, ch=1, v=1800, u="mV"):
-        val= 1800
-        if (u == "mV"):
-            if (v>1600) and (v<2200):
-                pass
-            elif v<1600:
-                val = 1600
-            elif v>2200:
-                val = 2200
-                           
-        self.psu1["PowerSupply"].set_voltage(val, unit=u, channel=ch)
-
-    def set_VCC_voltage(self, ch=0, v=3300, u="mV"):
-        val= 3300
-        if (u == "mV"):
-            if (v>3000) and (v<3500):
-                pass
-            elif v<3000:
-                val = 3000
-            elif v>3500:
-                val = 3500
-                           
-        self.psu2["PowerSupply"].set_voltage(val, unit=u, channel=ch)
     
-    def get_VDD_current(self, ch=0):
-        self.psu1['PowerSupply'].get_current(channel=ch)
-
-    def get_DVDD_current(self, ch=1):
-        self.psu1['PowerSupply'].get_current(channel=ch)
-
-    def test_power_consumption(self):
-        logging.info("Power; Power Consumption Test")
-        ivdd = get_VDD_current()
-        idvdd = get_DVDD_current()
+    def init_voltages(self):
+        self.set_VDD_voltage()
+        self.set_DVDD_voltage()
+        self.set_VCC_voltage()
+        self.set_DHE_voltage()
         
+        self.enable_voltages()
+        cnt = 0
+        while not self.is_DHE_on():
+            time.sleep(0.5)
+            printProgress(cnt,10)
+            cnt = cnt + 1
+        self.logger.info("DHE is ready!")
         
-        if (ivdd>110) and (ivdd<150) and (idvvd>30) and (idvdd<60):
-            logging.info("Power; Passed: VDD %smV(%smA) and DVDD %smV(%smA)"%(self.psu1.get_voltage(channel=0), ivdd, self.psu1.get_voltage(channel=1), idvdd))
+        self.logger.info("VCC on? %s"%self.is_VCC_on())
+        self.logger.info("dut connected? %s"%self.is_dut_connected())
+        self.logger.info("Init successul")
+        if self.is_VCC_on() and self.is_dut_connected():
             return True
         else:
-            logging.info("Power; Failed: VDD %smV(%smA) and DVDD %smV(%smA)"%(self.psu1.get_voltage(channel=0), ivdd, self.psu1.get_voltage(channel=1), idvdd))
+            return False
+    
+    def is_dut_connected(self):
+        if self.is_VDD_on() and self.is_DVDD_on():
+            return True
+        else:
+            return False
+    
+    def is_VDD_on(self):
+        if self.get_VDD_current() > 0.05:
+            return True
+        else:
+            return False
+            
+    def is_DVDD_on(self):
+        if self.get_DVDD_current() > 0.02:
+            return True
+        else:
+            return False
+    
+    def is_DHE_on(self):
+        if self.get_DHE_current() > 1.5:
+            return True
+        else:
+            return False
+    
+    def is_VCC_on(self):
+        if self.get_VCC_current() > 0.05:
+            return True
+        else:
+            return False
+        
+    def enable_voltages(self):
+        self.psu2["PowerSupply2"].on(channel=1)
+        self.psu2["PowerSupply2"].on(channel=2)
+        self.psu1["PowerSupply1"].on(channel=1)
+        self.psu1["PowerSupply1"].on(channel=2)
+    
+    def disable_voltages(self):
+        self.psu2["PowerSupply2"].off(channel=1)
+        self.psu2["PowerSupply2"].off(channel=2)
+        self.psu1["PowerSupply1"].off(channel=1)
+        self.psu1["PowerSupply1"].off(channel=2)
+            
+    def set_VDD_voltage(self, v=1.2, on=False):
+        self.vdd = v
+        ch = 1
+        self.psu2["PowerSupply2"].set_ocp(0.24, channel=ch)
+        self.psu2["PowerSupply2"].set_current_limit(0.22, channel=ch) 
+        self.psu2["PowerSupply2"].set_ovp(self.vdd+0.2, channel=ch)                   
+        self.psu2["PowerSupply2"].set_voltage(self.vdd, channel=ch)
+        if on:
+            self.psu2["PowerSupply2"].on(channel=ch)
+        else:
+            self.psu2["PowerSupply2"].off(channel=ch)
+
+    def set_DVDD_voltage(self, v=1.8, on=False):
+        self.dvdd= v
+        ch = 2
+        self.psu2["PowerSupply2"].set_ocp(0.08, channel=ch)
+        self.psu2["PowerSupply2"].set_current_limit(0.06, channel=ch) 
+        self.psu2["PowerSupply2"].set_ovp(self.dvdd+0.2, channel=ch)                  
+        self.psu2["PowerSupply2"].set_voltage(self.dvdd, channel=ch)
+        if on:
+            self.psu2["PowerSupply2"].on(channel=ch)
+        else:
+            self.psu2["PowerSupply2"].off(channel=ch)
+
+    def set_DHE_voltage(self, v=5.5, on=False):
+        val= v
+        ch = 1
+        self.psu1["PowerSupply1"].set_ocp(2.6, channel=ch)
+        self.psu1["PowerSupply1"].set_current_limit(2.5, channel=ch) 
+        self.psu1["PowerSupply1"].set_ovp(val+0.2, channel=ch)                   
+        self.psu1["PowerSupply1"].set_voltage(val, channel=ch)
+        if on:
+            self.psu1["PowerSupply1"].on(channel=ch)
+        else:
+            self.psu1["PowerSupply1"].off(channel=ch)
+
+    def set_VCC_voltage(self, v=2.5, on=False):
+        val= v
+        ch = 2
+        self.psu1["PowerSupply1"].set_ocp(0.5, channel=ch)
+        self.psu1["PowerSupply1"].set_current_limit(0.3, channel=ch) 
+        self.psu1["PowerSupply1"].set_ovp(val+0.4, channel=ch)                  
+        self.psu1["PowerSupply1"].set_voltage(val, channel=ch)
+        if on:
+            self.psu1["PowerSupply1"].on(channel=ch)
+        else:
+            self.psu1["PowerSupply1"].off(channel=ch)
+
+    def get_VDD_current(self):
+        ch=1
+        return float(self.psu2['PowerSupply2'].get_current(channel=ch)[0:3])
+
+    def get_DVDD_current(self):
+        ch=2
+        return float(self.psu2['PowerSupply2'].get_current(channel=ch)[0:3])
+        
+    def get_DHE_current(self):
+        ch=1
+        return float(self.psu1['PowerSupply1'].get_current(channel=ch)[0:3])
+    
+    def get_VCC_current(self):
+        ch=2
+        return float(self.psu1['PowerSupply1'].get_current(channel=ch)[0:3])
+
+
+    def test_power_consumption(self):
+        self.logger.info("Power; Power Consumption Test")
+        ivdd = self.get_VDD_current()
+        idvdd = self.get_DVDD_current()
+        
+        
+        if (ivdd>110) and (ivdd<150) and (idvdd>30) and (idvdd<60):
+            self.logger.info("Power; Passed: VDD %smV(%smA) and DVDD %smV(%smA)"%(self.vdd, ivdd, self.dvdd, idvdd))
+            return True
+        else:
+            self.logger.info("Power; Failed: VDD %smV(%smA) and DVDD %smV(%smA)"%(self.vdd, ivdd, self.dvdd, idvdd))
             return False
             
     def test_jtag(self):
@@ -263,9 +353,9 @@ class DHPTMP(PROBECARD):
         if not get_pv(self.sc.dhePrefix+":jtag_chain_initialized:S:cur").get():
             crst.put(0)
             crst.put(1)
-            logging.info("%s\tCRESETB; Reset JTAG registers in DHPT", __name__)
+            self.logger.info("%s\tCRESETB; Reset JTAG registers in DHPT", __name__)
             reinJTAG.put(1)
-            logging.info("%s\tReinitalized JTAG chain",__name__)
+            self.logger.info("%s\tReinitalized JTAG chain",__name__)
         
         self.sc.turn_all_regs_on()
         return True
@@ -278,7 +368,7 @@ class DHPTMP(PROBECARD):
         '''
         Test Data+Pedestal Memory
         '''
-        logging.info("MEM; Pedestal memory test")
+        self.logger.info("MEM; Pedestal memory test")
         start = time.time()
         
         rnd0 = np.random.randint(0,pow(2,32))
@@ -305,7 +395,7 @@ class DHPTMP(PROBECARD):
                     isErr = True
                     
             if isErr:
-                logging.fatal("Bit error detected: in mem block %s", derr[0]) 
+                self.logger.fatal("Bit error detected: in mem block %s", derr[0]) 
             
             for pat in pattern: 
                 self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem0"].set_value(pat)
@@ -313,8 +403,8 @@ class DHPTMP(PROBECARD):
                 self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem2"].set_value(pat)
                 self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem3"].set_value(pat)
                 for blk in range(16):
-                    #logging.info("MEM; use pattern %x"%pat)
-                    #logging.info("Pattern %x"%pat)
+                    #self.logger.info("MEM; use pattern %x"%pat)
+                    #self.logger.info("Pattern %x"%pat)
                     self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["addr"].set_value(blk << 10)
                     time.sleep(0.05)
                     for addr_id in range(1024):
@@ -332,24 +422,24 @@ class DHPTMP(PROBECARD):
                         mem2 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem2"].get_value())
                         mem3 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem3"].get_value())
                         time.sleep(0.05)
-                        #logging.info(patternErr)
+                        #self.logger.info(patternErr)
                         if ((mem0 != pat) or (mem1 != pat) or (mem2 != pat) or (mem3 != pat)):
                             patternErr = patternErr + 1 
-                            logging.info("Adress %d failure in block %d"%(addr_id, blk))
-                            logging.info("Received pattern %x %x %x %x"%(mem0, mem1, mem2, mem3))
+                            self.logger.info("Adress %d failure in block %d"%(addr_id, blk))
+                            self.logger.info("Received pattern %x %x %x %x"%(mem0, mem1, mem2, mem3))
                         
         stop = time.time()  
         
         if (patternErr == 0) and not isErr:
-            logging.info("Mem; Pedestal memory test passed after %d sec"%(stop-start))
+            self.logger.info("Mem; Pedestal memory test passed after %d sec"%(stop-start))
             isPedestalMemoryOK = True
         else:
-            logging.warning("Mem; Pedestal memory test failed. Result %d (!= 0)"%patternErr)
+            self.logger.warning("Mem; Pedestal memory test failed. Result %d (!= 0)"%patternErr)
            
         '''
         Test Offset Memory
         '''
-        logging.info("MEM; Offset memory test")
+        self.logger.info("MEM; Offset memory test")
         start = time.time()
         
         rnd0 = np.random.randint(0,pow(2,32))
@@ -376,15 +466,15 @@ class DHPTMP(PROBECARD):
                     isErr = True
                     
             if isErr:
-                logging.fatal("Bit error detected: in mem block %s", derr[0]) 
+                self.logger.fatal("Bit error detected: in mem block %s", derr[0]) 
             
             for pat in pattern: 
                 self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem0"].set_value(pat)
                 self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem1"].set_value(pat)
                 self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem2"].set_value(pat)
                 self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem3"].set_value(pat)
-                #logging.info("MEM; use pattern %x"%pat)
-                #logging.info("Pattern %x"%pat)
+                #self.logger.info("MEM; use pattern %x"%pat)
+                #self.logger.info("Pattern %x"%pat)
                 self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["addr"].set_value()
                 time.sleep(0.05)
                 for addr_id in range(1024):
@@ -401,25 +491,25 @@ class DHPTMP(PROBECARD):
                     mem2 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem2"].get_value())
                     mem3 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem3"].get_value())
                     time.sleep(0.05)
-                    #logging.info(patternErr)
+                    #self.logger.info(patternErr)
                     if ((mem0 != pat) or (mem1 != pat) or (mem2 != pat) or (mem3 != pat)):
                         patternErr = patternErr + 1 
-                        logging.info("Adress %d failure in block %d"%(addr_id, blk))
-                        logging.info("Received pattern %x %x %x %x"%(mem0, mem1, mem2, mem3))
+                        self.logger.info("Adress %d failure in block %d"%(addr_id, blk))
+                        self.logger.info("Received pattern %x %x %x %x"%(mem0, mem1, mem2, mem3))
                     
         stop = time.time()  
         
         if (patternErr == 0) and not isErr:
-            logging.info("Mem; Offset memory test passed after %d sec"%(stop-start))
+            self.logger.info("Mem; Offset memory test passed after %d sec"%(stop-start))
             isOffsetMemoryOK = True
         else:
-            logging.warning("Mem; Offset memory test failed. Result %d (!= 0)"%patternErr)
+            self.logger.warning("Mem; Offset memory test failed. Result %d (!= 0)"%patternErr)
                 
         
         '''
         Test Switcher Memory
         '''
-        logging.info("MEM; Switcher memory test")
+        self.logger.info("MEM; Switcher memory test")
         start = time.time()
         
         rnd0 = np.random.randint(0,pow(2,32))
@@ -446,7 +536,7 @@ class DHPTMP(PROBECARD):
                     isErr = True
                     
             if isErr:
-                logging.fatal("Bit error detected: in mem block %s", derr[0]) 
+                self.logger.fatal("Bit error detected: in mem block %s", derr[0]) 
             
             for pat in pattern: 
                 self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem0"].set_value(pat)
@@ -454,8 +544,8 @@ class DHPTMP(PROBECARD):
                 self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem2"].set_value(pat)
                 self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem3"].set_value(pat)
                 for blk in range(16):
-                    #logging.info("MEM; use pattern %x"%pat)
-                    #logging.info("Pattern %x"%pat)
+                    #self.logger.info("MEM; use pattern %x"%pat)
+                    #self.logger.info("Pattern %x"%pat)
                     self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["addr"].set_value()
                     time.sleep(0.05)
                     for addr_id in range(1024):
@@ -473,170 +563,171 @@ class DHPTMP(PROBECARD):
                         mem2 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem2"].get_value())
                         mem3 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem3"].get_value())
                         time.sleep(0.05)
-                        #logging.info(patternErr)
+                        #self.logger.info(patternErr)
                         if ((mem0 != pat) or (mem1 != pat) or (mem2 != pat) or (mem3 != pat)):
                             patternErr = patternErr + 1 
-                            logging.info("Adress %d failure in block %d"%(addr_id, blk))
-                            logging.info("Received pattern %x %x %x %x"%(mem0, mem1, mem2, mem3))
+                            self.logger.info("Adress %d failure in block %d"%(addr_id, blk))
+                            self.logger.info("Received pattern %x %x %x %x"%(mem0, mem1, mem2, mem3))
                         
         stop = time.time()  
         
         if (patternErr == 0) and not isErr:
-            logging.info("Mem; Offset memory test passed after %d sec"%(stop-start))
+            self.logger.info("Mem; Offset memory test passed after %d sec"%(stop-start))
             isSwitcherMemoryOK = True
         else:
-            logging.warning("Mem; Offset memory test failed. Result %d (!= 0)"%patternErr)
+            self.logger.warning("Mem; Offset memory test failed. Result %d (!= 0)"%patternErr)
                 
                 
         return isPedestalMemoryOK and isOffsetMemoryOK and isSwitcherMemoryOK 
     
-    def test_io_streams(self):
-        isDelayOK    = False
-        isDCDOK      = False
-        isOffsetOK   = False
-        isSwitcherOK = False
-         
-        '''
-        Test DCD Delay scan
-        '''
-        logging.info("I/O; DCD-DHPT Delay Test ")
-        start = time.time()
-        PROBECARD.send_testpattern_to_dhpt()
-        os.system("/home/lgermic/.cs-studio/analysis/delays/scan_delays.py")
-        os.system("/home/lgermic/.cs-studio/analysis/delays/analyze_delays.py")
-        os.system("/home/lgermic/.cs-studio/analysis/delays/find_optimal_delays.py")
-        '''
-        TODO: find_optimal_delays returns if optimal delays are found and optimal delays
-        '''
-        optDelays = True
-        stop = time.time()
-        
-        if optDelays:
-            logging.info("I/O; DCD-DHPT Delay Test passed after %d sec"%(stop-start))
-            isDelayOK = True
-        else:
-            logging.warning("I/O; DCD-DHPT Delay Test failed. No set of delays found.")
-    
-        '''
-        Test DCD Data 
-        '''
-        logging.info("I/O; DCD-DHPT Data Test ")
-        start = time.time()
-        testpattern = PROBECARD.send_random_pattern_to_dhpt()
-        filename = self.fileDir+"data"
-        self.sc.read_dhpt_data_via_hs(filename)
-        
-        read = FileReader(-1,1)
-        read.set_debug_output(False)
-        if read.open(filename):
-            print "File not found: ",filename
-            sys.exit(-1)
-        data, isRaw, isGood = read.readEvent()
-        nr_of_frames = 0
-        wrongbits = 0
-        while isGood:
-            nr_of_frames += 1
-            dataNew = mapping.matrixToDcd(data[:,:,nr_of_frames-1])
-            wrongbits += plots.calculate_wrong_bits(dataNew, testpattern)
-            data, isRaw, isGood = read.readEvent()
-        
-        isDCDOK = (wrongbits == 0) 
-        stop = time.time()
-        
-        if dcdData:
-            logging.info("I/O; DCD-DHPT Delay Test passed after %d sec"%(stop-start))
-            isDCDOK = True
-        else:
-            logging.warning("I/O; DCD-DHPT Delay Test failed. No set of delays found.")
-        
-        '''
-        Test Offset Data 
-        '''
-        isOffsetOK = True
-        logging.info("I/O; OFFSET Data Test ")
-        start = time.time()
-        data = np.zeros((4,4,512), dtype=np.uint32)
-        data[0,:,:] = np.array(4*[512*[0xAAAAAAAA]], dtype=np.uint32)    
-        data[1,:,:] = np.array(4*[512*[0x55555555]], dtype=np.uint32)    
-        data[2,:,:] = np.random.randint(0,np.power(2,32),(4,512))
-        data[3,:,:] = np.random.randint(0,np.power(2,32),(4,512))
-        
-        self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["pv"]["last_row"].set_value(255)
-        self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["dispatch"].set_value()    
-    
-        self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["offset_en_out"].set_value(1)
-        self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
-    
-        for pattern_id in range(4):
-            self.sc.fill_offset_memory(data[pattern_id])
-            PROBECARD.
-            dataRet = PROBECARD.get_offsetBits()
-            
-            wrong_data_row_id = []
-            if data[i].shape == dataRet.shape:
-                for row in range(data.shape[1]):
-                    if (data[id,:,row] != dataRet[:,row]): 
-                        wrong_data_row_id.append(row) 
-            
-            logging.info("Wrong data in row:\n " + ", ".join(str(x) for x in wrong_data_row_id))
-            logging.info("Received pattern %x %x %x %x vs Expected pattern %x %x %x %x"%(dataRet[0,row], dataRet[1,row], dataRet[2,row], dataRet[3,row], data[pattern_id,0,row], data[i,1,row], data[pattern_id,2,row], data[pattern_id,3,row]))
-            isOffsetOK = isOffsetOK & (len(wrong_data_row_id) == 0)           
-        stop = time.time()
-        
-        self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["offset_en_out"].set_value()
-        self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
-        if isOffsetOK:
-            logging.info("I/O; Offset Test passed after %d sec"%(stop-start))
-        else:
-            logging.warning("I/O; Offset Test failed.")
-        
-        '''
-        Test Switcher Data 
-        '''
-        isSwitcherOK = True
-        logging.info("I/O; Switcher Data Test ")
-        start = time.time()
-        data = np.zeros((4,4,1024), dtype=np.uint32)
-        data[0,:,:] = np.array(4*[1024*[0xAAAAAAAA]], dtype=np.uint32)    
-        data[1,:,:] = np.array(4*[1024*[0x55555555]], dtype=np.uint32)    
-        data[2,:,:] = np.random.randint(0,np.power(2,32),(4,1024))
-        data[3,:,:] = np.random.randint(0,np.power(2,32),(4,1024))
-        
-        numOfGates = 256
-        self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["pv"]["last_row"].set_value(numOfGates-1)
-        self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["dispatch"].set_value()    
-        self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["sw_en_out"].set_value(1)
-        self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
-        
-        for pattern_id in range(4):
-            self.sc.fill_switcher_memory(data[pattern_id])
-            dataRet = PROBECARD.get_switcherBits(numOfGates)
-            
-            wrong_data_row_id = []
-            if dataRet.shape == numOfGates:
-                for row in range(numOfGates):
-                    if (data[pattern_id,:,row] != dataRet[:,row]): 
-                        wrong_data_row_id.append(row) 
-            
-            logging.info("Wrong data in row:\n " + ", ".join(str(x) for x in wrong_data_row_id))
-            logging.info("Received pattern %x %x %x %x vs Expected pattern %x %x %x %x"%(dataRet[0,row], dataRet[1,row], dataRet[2,row], dataRet[3,row], data[pattern_id,0,row], data[i,1,row], data[pattern_id,2,row], data[pattern_id,3,row]))
-            isSwitcherOK = isSwitcherOK & (len(wrong_data_row_id) == 0)           
-        stop = time.time()
-        
-        self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["sw_en_out"].set_value()
-        self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
-        if isSwitcherOK:
-            logging.info("I/O; Switcher Test passed after %d sec"%(stop-start))
-        else:
-            logging.warning("I/O; Switcher Test failed.")
-        
+    #===========================================================================
+    # def test_io_streams(self):
+    #     isDelayOK    = False
+    #     isDCDOK      = False
+    #     isOffsetOK   = False
+    #     isSwitcherOK = False
+    #      
+    #     '''
+    #     Test DCD Delay scan
+    #     '''
+    #     self.logger.info("I/O; DCD-DHPT Delay Test ")
+    #     start = time.time()
+    #     PROBECARD.send_testpattern_to_dhpt()
+    #     os.system("/home/lgermic/.cs-studio/analysis/delays/scan_delays.py")
+    #     os.system("/home/lgermic/.cs-studio/analysis/delays/analyze_delays.py")
+    #     os.system("/home/lgermic/.cs-studio/analysis/delays/find_optimal_delays.py")
+    #     '''
+    #     TODO: find_optimal_delays returns if optimal delays are found and optimal delays
+    #     '''
+    #     optDelays = True
+    #     stop = time.time()
+    #     
+    #     if optDelays:
+    #         self.logger.info("I/O; DCD-DHPT Delay Test passed after %d sec"%(stop-start))
+    #         isDelayOK = True
+    #     else:
+    #         self.logger.warning("I/O; DCD-DHPT Delay Test failed. No set of delays found.")
+    # 
+    #     '''
+    #     Test DCD Data 
+    #     '''
+    #     self.logger.info("I/O; DCD-DHPT Data Test ")
+    #     start = time.time()
+    #     testpattern = PROBECARD.send_random_pattern_to_dhpt()
+    #     filename = self.fileDir+"data"
+    #     self.sc.read_dhpt_data_via_hs(filename)
+    #     
+    #     read = FileReader(-1,1)
+    #     read.set_debug_output(False)
+    #     if read.open(filename):
+    #         print "File not found: ",filename
+    #         sys.exit(-1)
+    #     data, isRaw, isGood = read.readEvent()
+    #     nr_of_frames = 0
+    #     wrongbits = 0
+    #     while isGood:
+    #         nr_of_frames += 1
+    #         dataNew = mapping.matrixToDcd(data[:,:,nr_of_frames-1])
+    #         wrongbits += plots.calculate_wrong_bits(dataNew, testpattern)
+    #         data, isRaw, isGood = read.readEvent()
+    #     
+    #     isDCDOK = (wrongbits == 0) 
+    #     stop = time.time()
+    #     
+    #     if dcdData:
+    #         self.logger.info("I/O; DCD-DHPT Delay Test passed after %d sec"%(stop-start))
+    #         isDCDOK = True
+    #     else:
+    #         self.logger.warning("I/O; DCD-DHPT Delay Test failed. No set of delays found.")
+    #     
+    #     '''
+    #     Test Offset Data 
+    #     '''
+    #     isOffsetOK = True
+    #     self.logger.info("I/O; OFFSET Data Test ")
+    #     start = time.time()
+    #     data = np.zeros((4,4,512), dtype=np.uint32)
+    #     data[0,:,:] = np.array(4*[512*[0xAAAAAAAA]], dtype=np.uint32)    
+    #     data[1,:,:] = np.array(4*[512*[0x55555555]], dtype=np.uint32)    
+    #     data[2,:,:] = np.random.randint(0,np.power(2,32),(4,512))
+    #     data[3,:,:] = np.random.randint(0,np.power(2,32),(4,512))
+    #     
+    #     self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["pv"]["last_row"].set_value(255)
+    #     self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["dispatch"].set_value()    
+    # 
+    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["offset_en_out"].set_value(1)
+    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
+    # 
+    #     for pattern_id in range(4):
+    #         self.sc.fill_offset_memory(data[pattern_id])
+    #         dataRet = PROBECARD.get_offsetBits()
+    #         
+    #         wrong_data_row_id = []
+    #         if data[i].shape == dataRet.shape:
+    #             for row in range(data.shape[1]):
+    #                 if (data[id,:,row] != dataRet[:,row]): 
+    #                     wrong_data_row_id.append(row) 
+    #         
+    #         self.logger.info("Wrong data in row:\n " + ", ".join(str(x) for x in wrong_data_row_id))
+    #         self.logger.info("Received pattern %x %x %x %x vs Expected pattern %x %x %x %x"%(dataRet[0,row], dataRet[1,row], dataRet[2,row], dataRet[3,row], data[pattern_id,0,row], data[i,1,row], data[pattern_id,2,row], data[pattern_id,3,row]))
+    #         isOffsetOK = isOffsetOK & (len(wrong_data_row_id) == 0)           
+    #     stop = time.time()
+    #     
+    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["offset_en_out"].set_value()
+    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
+    #     if isOffsetOK:
+    #         self.logger.info("I/O; Offset Test passed after %d sec"%(stop-start))
+    #     else:
+    #         self.logger.warning("I/O; Offset Test failed.")
+    #     
+    #     '''
+    #     Test Switcher Data 
+    #     '''
+    #     isSwitcherOK = True
+    #     self.logger.info("I/O; Switcher Data Test ")
+    #     start = time.time()
+    #     data = np.zeros((4,4,1024), dtype=np.uint32)
+    #     data[0,:,:] = np.array(4*[1024*[0xAAAAAAAA]], dtype=np.uint32)    
+    #     data[1,:,:] = np.array(4*[1024*[0x55555555]], dtype=np.uint32)    
+    #     data[2,:,:] = np.random.randint(0,np.power(2,32),(4,1024))
+    #     data[3,:,:] = np.random.randint(0,np.power(2,32),(4,1024))
+    #     
+    #     numOfGates = 256
+    #     self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["pv"]["last_row"].set_value(numOfGates-1)
+    #     self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["dispatch"].set_value()    
+    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["sw_en_out"].set_value(1)
+    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
+    #     
+    #     for pattern_id in range(4):
+    #         self.sc.fill_switcher_memory(data[pattern_id])
+    #         dataRet = PROBECARD.get_switcherBits(numOfGates)
+    #         
+    #         wrong_data_row_id = []
+    #         if dataRet.shape == numOfGates:
+    #             for row in range(numOfGates):
+    #                 if (data[pattern_id,:,row] != dataRet[:,row]): 
+    #                     wrong_data_row_id.append(row) 
+    #         
+    #         self.logger.info("Wrong data in row:\n " + ", ".join(str(x) for x in wrong_data_row_id))
+    #         self.logger.info("Received pattern %x %x %x %x vs Expected pattern %x %x %x %x"%(dataRet[0,row], dataRet[1,row], dataRet[2,row], dataRet[3,row], data[pattern_id,0,row], data[i,1,row], data[pattern_id,2,row], data[pattern_id,3,row]))
+    #         isSwitcherOK = isSwitcherOK & (len(wrong_data_row_id) == 0)           
+    #     stop = time.time()
+    #     
+    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["sw_en_out"].set_value()
+    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
+    #     if isSwitcherOK:
+    #         self.logger.info("I/O; Switcher Test passed after %d sec"%(stop-start))
+    #     else:
+    #         self.logger.warning("I/O; Switcher Test failed.")
+    #     
+    #===========================================================================
         
     def test_high_speed_link(self):
         isHSOK = False
         '''
         Test High Speed Link Memory
         '''
-        logging.info("HS; High Speed Link Test")
+        self.logger.info("HS; High Speed Link Test")
         start = time.time()
         os.system("/home/lgermic/.cs-studio/analysis/aurora_optimization/aurora_scan.py")
         os.system("/home/lgermic/.cs-studio/analysis/aurora_optimization/aurora_analyze.py")
@@ -655,10 +746,10 @@ class DHPTMP(PROBECARD):
         stop = time.time()
         
         if linkUp:
-            logging.info("HS; High Speed Test passed after %d sec"%(stop-start))
+            self.logger.info("HS; High Speed Test passed after %d sec"%(stop-start))
             isHSOK = True
         else:
-            logging.warning("HS; High Speed Test failed. No bias condition found.")
+            self.logger.warning("HS; High Speed Test failed. No bias condition found.")
     
         return isHSOK
     

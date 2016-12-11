@@ -1,10 +1,10 @@
 import logging
 
 from basil.dut import Dut
-from dhptclasses import SW_SIGNALS_4X_TIME_MULTIPLEXED
-from dhptclasses import OFFSET_4X_TIME_MULTIPLEXED
-from dhptclasses import SW_SIGNALS_SEQUENCE
-from dhptclasses import OFFSET_SIGNALS_SEQUENCE
+#from dhptclasses import SW_SIGNALS_4X_TIME_MULTIPLEXED
+#from dhptclasses import OFFSET_4X_TIME_MULTIPLEXED
+#from dhptclasses import SW_SIGNALS_SEQUENCE
+#from dhptclasses import OFFSET_SIGNALS_SEQUENCE
 import time
 import numpy as np
 from sys import exit

@@ -14,7 +14,7 @@ from epics import PV
 from time import sleep
 from matplotlib.backends.backend_pdf import Stream
 from _struct import unpack, pack
-mport numpy as np
+import numpy as np
 
 import time
 from misc import query_dict
