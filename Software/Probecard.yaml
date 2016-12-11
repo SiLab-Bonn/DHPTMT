@@ -1,0 +1,10 @@
+{hw_drivers: [{base_addr: 4096, interface: UART, mem_size: 4094, name: GPIO, size: 64,
+      type: gpio}, {base_addr: 0, i2c_device_addr: 32, interface: UART, mem_size: 5,
+      name: I2C, type: i2c}, {base_addr: 268435456, interface: UART, mem_size: 268435455,
+      name: SEQ_GEN, type: seq_gen}, {base_addr: 536870912, interface: UART, mem_size: 268435455,
+      name: SEQ_REC, type: seq_rec}, {base_addr: 65536, interface: UART, mem_size: 8,
+      name: PULSER_GEN, type: pulse_gen}, {base_addr: 73728, interface: UART, mem_size: 8,
+      name: PULSER_REC, type: pulse_gen}], name: Probecard, transfer_layer: [{init: {
+        avoid_download: true, baudrate: 9600, bit_file: /home/user/git/DHPTMP/Probecard.bit,
+        board_id: 1, bytesize: 8, parity: 0, port: '', stopbits: 1, timeout: 0.01},
+      name: UART, type: SiUart}], version: 0.9}
