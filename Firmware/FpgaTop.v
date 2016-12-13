@@ -25,7 +25,6 @@ module ProbeCardFpgaTop(
 	input wire [1:0] DI7,
 	
 	input wire DCD_R2S,
-	input wire FSYNC,
 	input wire EN_IO,
 	
 	output wire DCD_TDO,
@@ -70,10 +69,10 @@ localparam SEQ_REC_BASEADDR     	= 32'h2000_0000;
 localparam SEQ_REC_HIGHADDR     	= 32'h2fff_ffff;
 
 
-wire main_clk;
+wire main_clk, DCD_FSYNC;
 //clock and reset
 assign     main_clk      =  DCD_CLK; 
-
+assign     DCD_FSYNC     =  GPIO_0;
 /////////////////////////////////////////////////////////
 //Synchronization signals row2sync
 reg [1:0] r2s_edge;
