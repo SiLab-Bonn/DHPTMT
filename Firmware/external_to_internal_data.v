@@ -327,14 +327,14 @@ deserializer_1_2_4 #(
 ) u_deserializer_SW(
    ////////////////////////////////////////////////////////////////
   ////////////////////////// Inputs //////////////////////////////
-  .DATA_IN_FROM_PINS({SW_GATE,SW_CLEAR,SW_FRAME,SW_CLK}),
+  .DATA_IN_FROM_PINS({SW_GATE,SW_CLEAR,SW_FRAME,SW_CLK,DCD_FSYNC}),
   .CLK_DIV_IN(CLK_80),
   .IO_RESET(!LOCKED),
   .IOCLK(IOCLK_B3),
   .SERDESSTROBE(SERDESSTROBE_B3),
   ////////////////////////////////////////////////////////////////
   ////////////////////////// Outputs //////////////////////////////
-  .DATA_IN_TO_DEVICE({SW_DES[15:0]})
+  .DATA_IN_TO_DEVICE({SW_DES[15:0],FSYNC_DES})
 );
 
 
