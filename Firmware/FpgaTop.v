@@ -70,22 +70,20 @@ localparam SEQ_REC_BASEADDR     	= 32'h2000_0000;
 localparam SEQ_REC_HIGHADDR     	= 32'h2fff_ffff;
 
 
-wire main_clk, dcd_rst, switcher_rst;
+wire main_clk;
 //clock and reset
-assign     dcd_rst       =  DCD_R2S;
-assign 	   switcher_rst  =  GPIO_0;  //fsync from DHPT (connect GPIO_0 and FSYNC on PCB <<DEBUG1>> pin1 = pin5
 assign     main_clk      =  DCD_CLK; 
 
 /////////////////////////////////////////////////////////
 //Synchronization signals row2sync
 reg [1:0] r2s_edge;
 wire r2s_strobe;
-always @(posedge CLK_320) r2s_edge <= {r2s_edge[0], dcd_rst};
+always @(posedge CLK_320) r2s_edge <= {r2s_edge[0], DCD_R2S_BUFF};
 assign r2s_strobe = (r2s_edge == 2'b01);
 
 reg [1:0] fsync_edge;
 wire fsync_strobe;
-always @(posedge CLK_320) fsync_edge <= {fsync_edge[0], switcher_rst};
+always @(posedge CLK_320) fsync_edge <= {fsync_edge[0], DCD_FSYNC_BUFF};
 assign fsync_strobe = (fsync_edge == 2'b01);
 
 assign GPIO_1 = r2s_strobe; 
@@ -181,7 +179,12 @@ external_to_internal_data u_external_to_internal_data (
 	.SW_DES(SW_DATA),
 	
 	.DCD_R2S(DCD_R2S),
-	.R2S_DES(ROW2SYNC_DATA)
+	.R2S_DES(ROW2SYNC_DATA),
+	.DCD_R2S_BUFF(DCD_R2S_BUFF),
+	
+	.DCD_FSYNC(GPIO_0),
+	.FSYNC_DES(),
+	.DCD_FSYNC_BUFF(DCD_FSYNC_BUFF)
   
 );
 
