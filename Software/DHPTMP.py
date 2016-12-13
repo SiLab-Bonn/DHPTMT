@@ -198,13 +198,16 @@ class DHPTMP(PROBECARD):
 
         self.vdd = 0.0  
         self.dvdd = 0.0
-        self.sc         = SlowControl()
+		self.parasiticResistanceVDD = 5.0/8 #Needle and bumb connection compensation
+        self.parasiticResistanceDVDD = 5.0/8 #Needle and bumb connection compensation
+        
+		self.sc         = SlowControl()
   
         self.logger = initiate_logger(logFileDir, softwareVersion, dhptVersion, True)
         #PROBECARD.__init__(self, config)
         self.psu1.init()
         self.psu2.init()
-    
+	
     def init_voltages(self):
         self.set_VDD_voltage()
         self.set_DVDD_voltage()
@@ -223,7 +226,9 @@ class DHPTMP(PROBECARD):
         self.logger.info("dut connected? %s"%self.is_dut_connected())
         self.logger.info("Init successul")
         if self.is_VCC_on() and self.is_dut_connected():
-            return True
+            self.set_VDD_voltage(v=1.2+float(self.get_VDD_current()*self.parasiticResistanceVDD), on=True)
+			self.set_DVDD_voltage(v=1.8+float(self.get_DVDD_current()*self.parasiticResistanceDVDD), on=True)
+			return True
         else:
             return False
     

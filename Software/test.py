@@ -11,21 +11,20 @@ if __name__ == "__main__":
     outputPath = "/home/user/NeedleCardTest/Data/DHPT%s"%DHPTVERSION
     mp = DHPTMP(configFileName, outputPath, SOFTWAREVERSION, DHPTVERSION)
     mp.disable_voltages() 
-    #mp.init_voltages()    
-    #'''
-    #CHECK:    Power Consumption
-    #'''
-    #isPowerOK = mp.test_power_consumption()
-    #if not isPowerOK:
-    #    tester = ""
-    #    while (tester != "quit") or (tester != "ok"):
-    #        tester = raw_input("---ERROR---ERROR---ERROR---ERROR---ERROR---ERROR---\nPower Consumption Test failed!! Please check bump connection!\nOptions:\n\t-to continue type 'ok'\n\t-to quit test type 'quit'")
-    #        if tester == "quit":
-    #            logging.warning("Test abort!")
-    #            sys.exit(-1)
-    #        elif tester == "ok":
-    #            pass
-    #          
+    mp.init_voltages()    
+    '''
+    CHECK:    POWER CONSUMPTION
+    '''
+    isPowerOK = mp.test_power_consumption()
+    if not isPowerOK:
+       tester = ""
+       while (tester != "quit") or (tester != "ok"):
+           tester = raw_input("---error---error---error---error---error---error---\npower consumption test failed!! please check bump connection!\noptions:\n\t-to continue type 'ok'\n\t-to quit test type 'quit'")
+           if tester == "quit":
+               logging.warning("test abort!")
+               sys.exit(-1)
+           elif tester == "ok":
+               pass
 #===============================================================================
 #     
 #     mp.set_dcd_ref_voltage(voltage=0.9, unit="V")
