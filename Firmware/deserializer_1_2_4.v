@@ -59,7 +59,9 @@ module deserializer_1_2_4
  #(parameter sys_w = 1,
    // width of the data for the device
    parameter dev_w = 4,
-	parameter NOIBUF = 0)
+	parameter NOIBUF = 0,
+	//index of buffered single output
+    parameter buff_idx = 0)
  (
   // From the system into the device
   input  [sys_w-1:0] DATA_IN_FROM_PINS,
@@ -67,8 +69,12 @@ module deserializer_1_2_4
   input              CLK_DIV_IN,    // Slow clock input from PLL/MMCM
   input              IO_RESET,
   input SERDESSTROBE,
-  input IOCLK
+  input IOCLK,
+  
+  output wire out_buff
   );
+  assign out_buff = data_in_from_pins_delay[buff_idx]
+  
   localparam         num_serial_bits = dev_w/sys_w;
   // Signal declarations
   ////------------------------------
