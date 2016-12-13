@@ -1,0 +1,137 @@
+NET "DO7<0>"      LOC = "P114"; #   | SLEW = FAST;
+NET "DO7<1>"      LOC = "P112"; #   | SLEW = FAST;
+NET "DO7<2>"      LOC = "P98";  #   | SLEW = FAST;
+NET "DO7<3>"      LOC = "P5";   #   | SLEW = FAST;
+NET "DO7<4>"      LOC = "P144"; #   | SLEW = FAST;
+NET "DO7<5>"      LOC = "P115"; #   | SLEW = FAST;
+NET "DO7<6>"      LOC = "P99";  #   | SLEW = FAST;
+NET "DO7<7>"      LOC = "P2";   #   | SLEW = FAST;
+                               
+NET "DO6<7>"      LOC = "P6";   #   | SLEW = FAST;
+NET "DO6<6>"      LOC = "P97";  #   | SLEW = FAST;
+NET "DO6<5>"      LOC = "P111"; #   | SLEW = FAST;
+NET "DO6<4>"      LOC = "P8";   #   | SLEW = FAST;
+NET "DO6<3>"      LOC = "P22";  #   | SLEW = FAST;
+NET "DO6<2>"      LOC = "P95";  #   | SLEW = FAST;
+NET "DO6<1>"      LOC = "P104"; #   | SLEW = FAST;
+NET "DO6<0>"      LOC = "P119"; #   | SLEW = FAST;
+                               #
+NET "DO5<7>"      LOC = "P21";  #   | SLEW = FAST;
+NET "DO5<6>"      LOC = "P94";  #   | SLEW = FAST;
+NET "DO5<5>"      LOC = "P102"; #   | SLEW = FAST;
+NET "DO5<4>"      LOC = "P123"; #   | SLEW = FAST;
+NET "DO5<3>"      LOC = "P24";  #   | SLEW = FAST;
+NET "DO5<2>"      LOC = "P93";  #   | SLEW = FAST;
+NET "DO5<1>"      LOC = "P105"; #   | SLEW = FAST;
+NET "DO5<0>"      LOC = "P120"; #   | SLEW = FAST;
+                               #
+NET "DO4<7>"      LOC = "P65";  #   | SLEW = FAST;
+NET "DO4<6>"      LOC = "P92";  #   | SLEW = FAST;
+NET "DO4<5>"      LOC = "P79";  #   | SLEW = FAST;
+NET "DO4<4>"      LOC = "P57";  #   | SLEW = FAST;
+NET "DO4<3>"      LOC = "P64";  #   | SLEW = FAST;
+NET "DO4<2>"      LOC = "P87";  #   | SLEW = FAST;
+NET "DO4<1>"      LOC = "P78";  #   | SLEW = FAST;
+NET "DO4<0>"      LOC = "P58";  #   | SLEW = FAST;
+                               #
+NET "DO3<7>"      LOC = "P62";  #   | SLEW = FAST;
+NET "DO3<6>"      LOC = "P85";  #   | SLEW = FAST;
+NET "DO3<5>"      LOC = "P75";  #   | SLEW = FAST;
+NET "DO3<4>"      LOC = "P51";  #   | SLEW = FAST;
+NET "DO3<3>"      LOC = "P61";  #   | SLEW = FAST;
+NET "DO3<2>"      LOC = "P84";  #   | SLEW = FAST;
+NET "DO3<1>"      LOC = "P74";  #   | SLEW = FAST;
+NET "DO3<0>"      LOC = "P48";  #   | SLEW = FAST;
+                               #
+NET "DO2<7>"      LOC = "P60";  #   | SLEW = FAST;
+NET "DO2<6>"      LOC = "P83";  #   | SLEW = FAST;
+NET "DO2<5>"      LOC = "P70";  #   | SLEW = FAST;
+NET "DO2<4>"      LOC = "P46";  #   | SLEW = FAST;
+NET "DO2<3>"      LOC = "P59";  #   | SLEW = FAST;
+NET "DO2<2>"      LOC = "P82";  #   | SLEW = FAST;
+NET "DO2<1>"      LOC = "P69";  #   | SLEW = FAST;
+NET "DO2<0>"      LOC = "P44";  #   | SLEW = FAST;
+                               #
+NET "DO1<0>"      LOC = "P39";  #   | SLEW = FAST;
+NET "DO1<7>"      LOC = "P32";  #   | SLEW = FAST;
+NET "DO1<6>"      LOC = "P81";  #   | SLEW = FAST;
+NET "DO1<5>"      LOC = "P67";  #   | SLEW = FAST;
+NET "DO1<4>"      LOC = "P41";  #   | SLEW = FAST;
+NET "DO1<3>"      LOC = "P35";	#  | SLEW = FAST;
+NET "DO1<2>"      LOC = "P80";  #   | SLEW = FAST;
+NET "DO1<1>"      LOC = "P66";  #   | SLEW = FAST;
+                               
+NET "DO0<0>"      LOC = "P116"; #   | SLEW = FAST;
+NET "DO0<1>"      LOC = "P117"; #   | SLEW = FAST;
+NET "DO0<2>"      LOC = "P100"; #   | SLEW = FAST;
+NET "DO0<3>"      LOC = "P7";   #   | SLEW = FAST;
+NET "DO0<4>"      LOC = "P143"; #   | SLEW = FAST;
+NET "DO0<5>"      LOC = "P118"; #   | SLEW = FAST;
+NET "DO0<6>"      LOC = "P101"; #   | SLEW = FAST;
+NET "DO0<7>"      LOC = "P1";   #   | SLEW = FAST;
+                               #
+                               #
+                               #
+NET "DI7<0>"      LOC = "P133"; #   | SLEW = FAST;
+NET "DI7<1>"      LOC = "P140"; #   | SLEW = FAST;
+NET "DI6<1>"      LOC = "P131"; #   | SLEW = FAST;
+NET "DI6<0>"      LOC = "P126"; #   | SLEW = FAST;
+NET "DI5<1>"      LOC = "P124"; #   | SLEW = FAST;
+NET "DI5<0>"      LOC = "P121"; #   | SLEW = FAST;
+NET "DI4<1>"      LOC = "P56";  #   | SLEW = FAST;
+NET "DI4<0>"      LOC = "P55";  #   | SLEW = FAST;
+NET "DI3<1>"      LOC = "P50";  #   | SLEW = FAST;
+NET "DI3<0>"      LOC = "P47";  #   | SLEW = FAST;
+NET "DI2<1>"      LOC = "P45";  #   | SLEW = FAST;
+NET "DI2<0>"      LOC = "P43";  #   | SLEW = FAST;
+NET "DI1<1>"      LOC = "P40";  #   | SLEW = FAST;
+NET "DI1<0>"      LOC = "P38";  #   | SLEW = FAST;
+NET "DI0<0>"      LOC = "P142"; #   | SLEW = FAST;
+NET "DI0<1>"      LOC = "P141"; #   | SLEW = FAST;
+
+
+                                  
+##################################
+############CLOCK CONSTRAINS######
+##################################
+NET "DCD_CLK" TNM_NET = "clk_slow_tn";
+NET "DCD_CLK"      LOC = "P132";# | IOSTANDARD="LVCMOS18";
+NET "DCD_CLK" CLOCK_DEDICATED_ROUTE = FALSE;
+TIMESPEC "TS_MAIN_CLK" = PERIOD "clk_slow_tn" 3.125 ns HIGH 50 %;
+
+//PIN "DCD_R2S" TIG;
+NET "DCD_R2S"      LOC = "P127";
+NET "EN_IO"        LOC = "P30";
+
+
+NET "DCD_TDI"          LOC = "P34";
+NET "DCD_TMS"          LOC = "P137";
+NET "DCD_TCK"          LOC = "P138";
+NET "DCD_TCK" CLOCK_DEDICATED_ROUTE = FALSE;
+NET "DCD_TRST"         LOC = "P134";
+NET "DCD_TDO"          LOC = "P139";
+
+NET "SW_CLEAR_P"       LOC = "P10";
+NET "SW_CLEAR_N"       LOC = "P9";
+NET "SW_GATE_P"        LOC = "P12";
+NET "SW_GATE_N"        LOC = "P11";
+NET "SW_CLK_P"         LOC = "P17";
+NET "SW_CLK_N"         LOC = "P16";
+NET "SW_FRAME_P"       LOC = "P15";
+NET "SW_FRAME_N"       LOC = "P14";
+
+NET "FPGA_TX"          LOC = "P33";
+NET "FPGA_RX"          LOC = "P26";
+
+#NET "GPIO_0"           TNM_NET = "clk_slow_tn";
+NET "GPIO_0"      LOC = "P88";# | IOSTANDARD="LVCMOS18";
+NET "GPIO_0" CLOCK_DEDICATED_ROUTE = FALSE;
+NET "GPIO_1"           LOC = "P23";
+
+
+NET "SDA"              LOC = "P27";
+NET "SCL"              LOC = "P29";
+
+#PIN "u_external_to_internal_data/u_clk_wiz_v3_2/clkout2_buf.O" CLOCK_DEDICATED_ROUTE = FALSE;
+#PIN "u_external_to_internal_data/u_clk_wiz_v3_2/pll_base_inst/PLL_ADV.CLKOUT0" CLOCK_DEDICATED_ROUTE = FALSE;
+#NET "DO6<3>" CLOCK_DEDICATED_ROUTE = FALSE;
