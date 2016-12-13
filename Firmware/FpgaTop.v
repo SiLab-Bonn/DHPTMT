@@ -98,9 +98,10 @@ clk_gen i_clk_gen(
 
 
 wire BUS_RST, BUS_CLK;
-//for main_clk = DES_CLK =  4x 77.2 MHz
-// DIV = Ref_clk / Baudrate / 4
-parameter UART_CLK_DIVISOR = 335;     // BAUDRATE 230400 
+//for main_clk = CLK_320 =  4x 77.23 MHz
+// DIV = CLK_320 / Baudrate / 4
+//parameter UART_CLK_DIVISOR = 335;     // BAUDRATE 230400 
+parameter UART_CLK_DIVISOR = 168;     // BAUDRATE 460800 
 
 clock_divider #(.DIVISOR(UART_CLK_DIVISOR) 
 	) i_clock_divisor_uart (
@@ -269,7 +270,7 @@ assign {DO7_i,DO6_i,DO5_i,DO4_i,DO3_i,DO2_i,DO1_i,DO0_i} = DO_DATA;
 seq_gen #( .BASEADDR(SEQ_GEN_BASEADDR), 
 		   .HIGHADDR(SEQ_GEN_HIGHADDR),
 		   .ABUSWIDTH(32),
-		   .MEM_BYTES(16*2048), 
+		   .MEM_BYTES(16*1024), 
 		   .OUT_BITS(256) 
 	) i_seq_gen
 (
@@ -292,7 +293,7 @@ assign DI_DATA = {DI7_i,DI6_i,DI5_i,DI4_i,DI3_i,DI2_i,DI1_i,DI0_i};
 seq_rec #( .BASEADDR(SEQ_REC_BASEADDR), 
 		   .HIGHADDR(SEQ_REC_HIGHADDR),
 		   .ABUSWIDTH(32),
-		   .MEM_BYTES(16*2048), 
+		   .MEM_BYTES(16*1024), 
 		   .IN_BITS(256)
 	) i_seq_rec
 (

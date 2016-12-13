@@ -5,6 +5,6 @@
       name: SEQ_REC, type: seq_rec}, {base_addr: 65536, interface: UART, mem_size: 8,
       name: PULSER_GEN, type: pulse_gen}, {base_addr: 73728, interface: UART, mem_size: 8,
       name: PULSER_REC, type: pulse_gen}], name: Probecard, transfer_layer: [{init: {
-        avoid_download: true, baudrate: 9600, bit_file: /home/user/git/DHPTMP/Probecard.bit,
+        avoid_download: true, baudrate: 460800, bit_file: /home/user/git/DHPTMP/Probecard.bit,
         board_id: 1, bytesize: 8, parity: 0, port: '', stopbits: 1, timeout: 0.01},
       name: UART, type: SiUart}], version: 0.9}
