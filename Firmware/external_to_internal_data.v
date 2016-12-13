@@ -77,10 +77,14 @@ module external_to_internal_data(
   
      output wire  [15:0] SW_DES,
 	  
-	  //reset signal
+	  //reset signals
 	  input wire   DCD_R2S,
-	  output wire  [3:0]	R2S_DES
- 
+	  output wire  [3:0]	R2S_DES,
+	  output wire DCD_R2S_BUFF,
+	  
+	  input wire   DCD_FSYNC,
+	  output wire  [3:0]	FSYNC_DES,
+	  output wire DCD_FSYNC_BUFF
  
  );
 
