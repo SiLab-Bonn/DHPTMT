@@ -85,11 +85,13 @@ assign     main_clk      =  DCD_CLK;
 assign     DCD_FSYNC     =  GPIO_0;
 /////////////////////////////////////////////////////////
 //Synchronization signals row2sync
+wire DCD_R2S_BUFF;
 reg [1:0] r2s_edge;
 wire r2s_strobe;
 always @(posedge CLK_320) r2s_edge <= {r2s_edge[0], DCD_R2S_BUFF};
 assign r2s_strobe = (r2s_edge == 2'b01);
 
+wire DCD_FSYNC_BUFF;
 reg [1:0] fsync_edge;
 wire fsync_strobe;
 always @(posedge CLK_320) fsync_edge <= {fsync_edge[0], DCD_FSYNC_BUFF};
