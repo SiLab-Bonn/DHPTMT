@@ -15,7 +15,7 @@
  * - multi window recording (sorted with but multiple times)
  */
 
-module seq_rec_core
+module seq_rec_core_off
 #(
     parameter MEM_BYTES = 8*1024,
     parameter ABUSWIDTH = 16,
