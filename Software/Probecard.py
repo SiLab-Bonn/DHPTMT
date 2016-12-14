@@ -191,10 +191,15 @@ class PROBECARD(Dut):
     def get_dcd_random_pattern(self):
         return np.zeros([np.random.randint(0,256) for i in range(32)], dtype=np.uint8) 
     
-    def get_seq_rec_data(self, seq_rec_row):
-        total_num_bytes = 32*seq_rec_row
-        d = self['SEQ_REC'].get_data(total_num_bytes)
-        return [d[i*32:(i+1)*32] for i in range(seq_rec_row)] 
+    def get_seq_rec_off_data(self, seq_rec_row):
+        total_num_bytes = 8*seq_rec_row
+        d = self['SEQ_REC_OFF'].get_data(total_num_bytes)
+        return [d[i*8:(i+1)*8] for i in range(seq_rec_row)] 
+
+    def get_seq_rec_sw_data(self, seq_rec_row):
+        total_num_bytes = 2*seq_rec_row
+        d = self['SEQ_REC_SW'].get_data(total_num_bytes)
+        return [d[i*2:(i+1)*2] for i in range(seq_rec_row)] 
 
     def get_offsetBits(self):
         seq_rec_row = last_row*8 
@@ -202,7 +207,7 @@ class PROBECARD(Dut):
             self.conf_seqRec_size(seq_rec_row)
             self.is_seq_rec_configured = True
                   
-        data = self.get_seq_rec_data(seq_rec_row)
+        data = self.get_seq_rec_off_data(seq_rec_row)
         retData = []
         
         block3210 = np.zeros(4, dtype=np.uint32)
@@ -210,27 +215,27 @@ class PROBECARD(Dut):
             block3210[3] = np.uint32(
                 (
                     (
-                        ((data[blk,32-7] & 0x20) << 26) | ((data[blk,32-7] & 0x02) << 29) |
-                        ((data[blk,32-7] & 0x20) << 24) | ((data[blk,32-7] & 0x02) << 27) |
-                        ((data[blk,32-6] & 0x20) << 22) | ((data[blk,32-6] & 0x02) << 25) |
-                        ((data[blk,32-5] & 0x20) << 20) | ((data[blk,32-5] & 0x02) << 23) |
-                        ((data[blk,32-4] & 0x20) << 18) | ((data[blk,32-4] & 0x02) << 21) |
-                        ((data[blk,32-3] & 0x20) << 16) | ((data[blk,32-3] & 0x02) << 19) |
-                        ((data[blk,32-2] & 0x20) << 14) | ((data[blk,32-2] & 0x02) << 17) | 
-                        ((data[blk,32-1] & 0x20) << 12) | ((data[blk,32-1] & 0x02) << 15)
+                        ((data[blk,0] & 0x20) << 26) | ((data[blk,0] & 0x02) << 29) |
+                        ((data[blk,1] & 0x20) << 24) | ((data[blk,1] & 0x02) << 27) |
+                        ((data[blk,2] & 0x20) << 22) | ((data[blk,2] & 0x02) << 25) |
+                        ((data[blk,3] & 0x20) << 20) | ((data[blk,3] & 0x02) << 23) |
+                        ((data[blk,4] & 0x20) << 18) | ((data[blk,4] & 0x02) << 21) |
+                        ((data[blk,5] & 0x20) << 16) | ((data[blk,5] & 0x02) << 19) |
+                        ((data[blk,6] & 0x20) << 14) | ((data[blk,6] & 0x02) << 17) | 
+                        ((data[blk,7] & 0x20) << 12) | ((data[blk,7] & 0x02) << 15)
                     ) >> 16 
                  )
                       |
                 (
                     (
-                        ((data[blk,32-7] & 0x10) << 11)| ((data[blk,32-7] & 0x01) << 14) |
-                        ((data[blk,32-7] & 0x10) << 9) | ((data[blk,32-7] & 0x01) << 12) |
-                        ((data[blk,32-6] & 0x10) << 7) | ((data[blk,32-6] & 0x01) << 10) |
-                        ((data[blk,32-5] & 0x10) << 5) | ((data[blk,32-5] & 0x01) << 8) |
-                        ((data[blk,32-4] & 0x10) << 3) | ((data[blk,32-4] & 0x01) << 6) |
-                        ((data[blk,32-3] & 0x10) << 1) | ((data[blk,32-3] & 0x01) << 4) |
-                        ((data[blk,32-2] & 0x10) >> 1) | ((data[blk,32-2] & 0x01) << 2) | 
-                        ((data[blk,32-1] & 0x10) >> 3) | (data[blk,32-1] & 0x01)
+                        ((data[blk,0] & 0x10) << 11)| ((data[blk,0] & 0x01) << 14) |
+                        ((data[blk,1] & 0x10) << 9) | ((data[blk,1] & 0x01) << 12) |
+                        ((data[blk,2] & 0x10) << 7) | ((data[blk,2] & 0x01) << 10) |
+                        ((data[blk,3] & 0x10) << 5) | ((data[blk,3] & 0x01) << 8) |
+                        ((data[blk,4] & 0x10) << 3) | ((data[blk,4] & 0x01) << 6) |
+                        ((data[blk,5] & 0x10) << 1) | ((data[blk,5] & 0x01) << 4) |
+                        ((data[blk,6] & 0x10) >> 1) | ((data[blk,6] & 0x01) << 2) | 
+                        ((data[blk,7] & 0x10) >> 3) | ( data[blk,7] & 0x01)
                     ) << 16
                 )
             )
@@ -238,82 +243,82 @@ class PROBECARD(Dut):
             block3210[2] = np.uint32(
                 (
                     (
-                        ((data[blk,32-7] & 0x80) << 26) | ((data[blk,32-7] & 0x08) << 29) |
-                        ((data[blk,32-7] & 0x80) << 24) | ((data[blk,32-7] & 0x08) << 27) |
-                        ((data[blk,32-6] & 0x80) << 22) | ((data[blk,32-6] & 0x08) << 25) |
-                        ((data[blk,32-5] & 0x80) << 20) | ((data[blk,32-5] & 0x08) << 23) |
-                        ((data[blk,32-4] & 0x80) << 18) | ((data[blk,32-4] & 0x08) << 21) |
-                        ((data[blk,32-3] & 0x80) << 16) | ((data[blk,32-3] & 0x08) << 19) |
-                        ((data[blk,32-2] & 0x80) << 14) | ((data[blk,32-2] & 0x08) << 17) | 
-                        ((data[blk,32-1] & 0x80) << 12) | ((data[blk,32-1] & 0x08) << 15)
+                        ((data[blk,0] & 0x80) << 26) | ((data[blk,0] & 0x08) << 29) |
+                        ((data[blk,1] & 0x80) << 24) | ((data[blk,1] & 0x08) << 27) |
+                        ((data[blk,2] & 0x80) << 22) | ((data[blk,2] & 0x08) << 25) |
+                        ((data[blk,3] & 0x80) << 20) | ((data[blk,3] & 0x08) << 23) |
+                        ((data[blk,4] & 0x80) << 18) | ((data[blk,4] & 0x08) << 21) |
+                        ((data[blk,5] & 0x80) << 16) | ((data[blk,5] & 0x08) << 19) |
+                        ((data[blk,6] & 0x80) << 14) | ((data[blk,6] & 0x08) << 17) | 
+                        ((data[blk,7] & 0x80) << 12) | ((data[blk,7] & 0x08) << 15)
                     ) >> 16 
                  )
                       |
                 (
                     (
-                        ((data[blk,32-7] & 0x40) << 11)| ((data[blk,32-7] & 0x04) << 14) |
-                        ((data[blk,32-7] & 0x40) << 9) | ((data[blk,32-7] & 0x04) << 12) |
-                        ((data[blk,32-6] & 0x40) << 7) | ((data[blk,32-6] & 0x04) << 10) |
-                        ((data[blk,32-5] & 0x40) << 5) | ((data[blk,32-5] & 0x04) << 8) |
-                        ((data[blk,32-4] & 0x40) << 3) | ((data[blk,32-4] & 0x04) << 6) |
-                        ((data[blk,32-3] & 0x40) << 1) | ((data[blk,32-3] & 0x04) << 4) |
-                        ((data[blk,32-2] & 0x40) >> 1) | ((data[blk,32-2] & 0x04) << 2) | 
-                        ((data[blk,32-1] & 0x40) >> 3) | (data[blk,32-1] & 0x04)
+                        ((data[blk,0] & 0x40) << 11)| ((data[blk,0] & 0x04) << 14) |
+                        ((data[blk,1] & 0x40) << 9) | ((data[blk,1] & 0x04) << 12) |
+                        ((data[blk,2] & 0x40) << 7) | ((data[blk,2] & 0x04) << 10) |
+                        ((data[blk,3] & 0x40) << 5) | ((data[blk,3] & 0x04) << 8) |
+                        ((data[blk,4] & 0x40) << 3) | ((data[blk,4] & 0x04) << 6) |
+                        ((data[blk,5] & 0x40) << 1) | ((data[blk,5] & 0x04) << 4) |
+                        ((data[blk,6] & 0x40) >> 1) | ((data[blk,6] & 0x04) << 2) | 
+                        ((data[blk,7] & 0x40) >> 3) | ( data[blk,7] & 0x04)
                     ) << 16
                 )
             )
             block3210[1] = np.uint32(
                 (
                     (
-                        ((data[blk+1,32-7] & 0x20) << 26) | ((data[blk+1,32-7] & 0x02) << 29) |
-                        ((data[blk+1,32-7] & 0x20) << 24) | ((data[blk+1,32-7] & 0x02) << 27) |
-                        ((data[blk+1,32-6] & 0x20) << 22) | ((data[blk+1,32-6] & 0x02) << 25) |
-                        ((data[blk+1,32-5] & 0x20) << 20) | ((data[blk+1,32-5] & 0x02) << 23) |
-                        ((data[blk+1,32-4] & 0x20) << 18) | ((data[blk+1,32-4] & 0x02) << 21) |
-                        ((data[blk+1,32-3] & 0x20) << 16) | ((data[blk+1,32-3] & 0x02) << 19) |
-                        ((data[blk+1,32-2] & 0x20) << 14) | ((data[blk+1,32-2] & 0x02) << 17) | 
-                        ((data[blk+1,32-1] & 0x20) << 12) | ((data[blk+1,32-1] & 0x02) << 15)
+                        ((data[blk+1,0] & 0x20) << 26) | ((data[blk+1,0] & 0x02) << 29) |
+                        ((data[blk+1,1] & 0x20) << 24) | ((data[blk+1,1] & 0x02) << 27) |
+                        ((data[blk+1,2] & 0x20) << 22) | ((data[blk+1,2] & 0x02) << 25) |
+                        ((data[blk+1,3] & 0x20) << 20) | ((data[blk+1,3] & 0x02) << 23) |
+                        ((data[blk+1,4] & 0x20) << 18) | ((data[blk+1,4] & 0x02) << 21) |
+                        ((data[blk+1,5] & 0x20) << 16) | ((data[blk+1,5] & 0x02) << 19) |
+                        ((data[blk+1,6] & 0x20) << 14) | ((data[blk+1,6] & 0x02) << 17) | 
+                        ((data[blk+1,7] & 0x20) << 12) | ((data[blk+1,7] & 0x02) << 15)
                     ) >> 16 
                  )
                       |
                 (
                     (
-                        ((data[blk+1,32-7] & 0x10) << 11)| ((data[blk+1,32-7] & 0x01) << 14) |
-                        ((data[blk+1,32-7] & 0x10) << 9) | ((data[blk+1,32-7] & 0x01) << 12) |
-                        ((data[blk+1,32-6] & 0x10) << 7) | ((data[blk+1,32-6] & 0x01) << 10) |
-                        ((data[blk+1,32-5] & 0x10) << 5) | ((data[blk+1,32-5] & 0x01) << 8) |
-                        ((data[blk+1,32-4] & 0x10) << 3) | ((data[blk+1,32-4] & 0x01) << 6) |
-                        ((data[blk+1,32-3] & 0x10) << 1) | ((data[blk+1,32-3] & 0x01) << 4) |
-                        ((data[blk+1,32-2] & 0x10) >> 1) | ((data[blk+1,32-2] & 0x01) << 2) | 
-                        ((data[blk+1,32-1] & 0x10) >> 3) | (data[blk+1,32-1] & 0x01)
-                    ) << 16
-                )
-            )
-            
+                        ((data[blk+1,0] & 0x10) << 11)| ((data[blk+1,0] & 0x01) << 14) |
+                        ((data[blk+1,1] & 0x10) << 9) | ((data[blk+1,1] & 0x01) << 12) |
+                        ((data[blk+1,2] & 0x10) << 7) | ((data[blk+1,2] & 0x01) << 10) |
+                        ((data[blk+1,3] & 0x10) << 5) | ((data[blk+1,3] & 0x01) << 8) |
+                        ((data[blk+1,4] & 0x10) << 3) | ((data[blk+1,4] & 0x01) << 6) |
+                        ((data[blk+1,5] & 0x10) << 1) | ((data[blk+1,5] & 0x01) << 4) |
+                        ((data[blk+1,6] & 0x10) >> 1) | ((data[blk+1,6] & 0x01) << 2) | 
+                        ((data[blk+1,7] & 0x10) >> 3) | ( data[blk+1,7] & 0x01)
+                    ) << 16          
+                )                    
+            )                        
+                                     
             block3210[0] = np.uint32(
-                (
-                    (
-                        ((data[blk+1,32-7] & 0x80) << 26) | ((data[blk,32-7] & 0x08) << 29) |
-                        ((data[blk+1,32-7] & 0x80) << 24) | ((data[blk,32-7] & 0x08) << 27) |
-                        ((data[blk+1,32-6] & 0x80) << 22) | ((data[blk,32-6] & 0x08) << 25) |
-                        ((data[blk+1,32-5] & 0x80) << 20) | ((data[blk,32-5] & 0x08) << 23) |
-                        ((data[blk+1,32-4] & 0x80) << 18) | ((data[blk,32-4] & 0x08) << 21) |
-                        ((data[blk+1,32-3] & 0x80) << 16) | ((data[blk,32-3] & 0x08) << 19) |
-                        ((data[blk+1,32-2] & 0x80) << 14) | ((data[blk,32-2] & 0x08) << 17) | 
-                        ((data[blk+1,32-1] & 0x80) << 12) | ((data[blk,32-1] & 0x08) << 15)
+                (                    
+                    (                
+                        ((data[blk+1,0] & 0x80) << 26) | ((data[blk,0] & 0x08) << 29) |
+                        ((data[blk+1,1] & 0x80) << 24) | ((data[blk,1] & 0x08) << 27) |
+                        ((data[blk+1,2] & 0x80) << 22) | ((data[blk,2] & 0x08) << 25) |
+                        ((data[blk+1,3] & 0x80) << 20) | ((data[blk,3] & 0x08) << 23) |
+                        ((data[blk+1,4] & 0x80) << 18) | ((data[blk,4] & 0x08) << 21) |
+                        ((data[blk+1,5] & 0x80) << 16) | ((data[blk,5] & 0x08) << 19) |
+                        ((data[blk+1,6] & 0x80) << 14) | ((data[blk,6] & 0x08) << 17) | 
+                        ((data[blk+1,7] & 0x80) << 12) | ((data[blk,7] & 0x08) << 15)
                     ) >> 16 
                  )
                       |
                 (
                     (
-                        ((data[blk+1,32-7] & 0x40) << 11)| ((data[blk+1,32-7] & 0x04) << 14) |
-                        ((data[blk+1,32-7] & 0x40) << 9) | ((data[blk+1,32-7] & 0x04) << 12) |
-                        ((data[blk+1,32-6] & 0x40) << 7) | ((data[blk+1,32-6] & 0x04) << 10) |
-                        ((data[blk+1,32-5] & 0x40) << 5) | ((data[blk+1,32-5] & 0x04) << 8) |
-                        ((data[blk+1,32-4] & 0x40) << 3) | ((data[blk+1,32-4] & 0x04) << 6) |
-                        ((data[blk+1,32-3] & 0x40) << 1) | ((data[blk+1,32-3] & 0x04) << 4) |
-                        ((data[blk+1,32-2] & 0x40) >> 1) | ((data[blk+1,32-2] & 0x04) << 2) | 
-                        ((data[blk+1,32-1] & 0x40) >> 3) | (data[blk+1,32-1] & 0x04)
+                        ((data[blk+1,0] & 0x40) << 11)| ((data[blk+1,0] & 0x04) << 14) |
+                        ((data[blk+1,1] & 0x40) << 9) | ((data[blk+1,1] & 0x04) << 12) |
+                        ((data[blk+1,2] & 0x40) << 7) | ((data[blk+1,2] & 0x04) << 10) |
+                        ((data[blk+1,3] & 0x40) << 5) | ((data[blk+1,3] & 0x04) << 8) |
+                        ((data[blk+1,4] & 0x40) << 3) | ((data[blk+1,4] & 0x04) << 6) |
+                        ((data[blk+1,5] & 0x40) << 1) | ((data[blk+1,5] & 0x04) << 4) |
+                        ((data[blk+1,6] & 0x40) >> 1) | ((data[blk+1,6] & 0x04) << 2) | 
+                        ((data[blk+1,7] & 0x40) >> 3) | ( data[blk+1,7] & 0x04)
                     ) << 16
                 )
             )
@@ -443,7 +448,7 @@ class PROBECARD(Dut):
             self.conf_seqRec_size(seq_rec_row)
             self.is_seq_rec_configured = True
                   
-        data = self.get_seq_rec_data(seq_rec_row)
+        data = self.get_seq_rec_sw_data(seq_rec_row)
         
         #block3 clk, block2 gate, block1 clear, block0 serIn
         block3210 = np.zeros(4, dtype=np.uint32)
@@ -453,10 +458,10 @@ class PROBECARD(Dut):
             clear = []
             serIn = []
             for i in range(8):
-                clk.append(  (data[block_id+i  , 32 - 10] & 0xf0) >> 4)
-                gate.append(  data[block_id+i  , 32 - 10] & 0x0f)
-                clear.append((data[block_id+i  , 32 - 9]  & 0xf0) >> 4)
-                serIn.append( data[block_id+i  , 32 - 9]  & 0xf0)
+                clk.append(  (data[block_id+i  , 0] & 0xf0) >> 4)
+                gate.append(  data[block_id+i  , 0] & 0x0f)
+                clear.append((data[block_id+i  , 1]  & 0xf0) >> 4)
+                serIn.append( data[block_id+i  , 1]  & 0xf0)
             block3210[3] = (clk[7]   << 28) | (clk[6]   << 24) | (clk[5]   << 20) | (clk[4]   << 16) | (clk[3]   << 12) | (clk[2]   << 8) | (clk[1]   << 4) | clk[0]
             block3210[2] = (gate[7]  << 28) | (gate[6]  << 24) | (gate[5]  << 20) | (gate[4]  << 16) | (gate[3]  << 12) | (gate[2]  << 8) | (gate[1]  << 4) | gate[0]
             block3210[1] = (clear[7] << 28) | (clear[6] << 24) | (clear[5] << 20) | (clear[4] << 16) | (clear[3] << 12) | (clear[2] << 8) | (clear[1] << 4) | clear[0]
