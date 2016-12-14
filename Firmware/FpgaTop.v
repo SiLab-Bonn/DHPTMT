@@ -64,9 +64,19 @@ localparam I2C_HIGHADDR         	= 32'h0000_0008;
 
 localparam SEQ_GEN_BASEADDR     	= 32'h1000_0000;
 localparam SEQ_GEN_HIGHADDR     	= 32'h1fff_ffff;
- 
-localparam SEQ_REC_BASEADDR     	= 32'h2000_0000;
-localparam SEQ_REC_HIGHADDR     	= 32'h2fff_ffff;
+
+//For offset bits
+localparam SEQ_REC_OFFSET_BASEADDR     = 32'h2000_0000;
+localparam SEQ_REC_OFFSET_HIGHADDR     = 32'h2000_00ff;
+
+//for switcher bits
+localparam SEQ_REC_SWITCHER_BASEADDR   = 32'h2000_0f00;
+localparam SEQ_REC_SWITCHER_HIGHADDR   = 32'h200f_f000;
+
+//for r2s and fsync
+localparam SEQ_REC_RST_BASEADDR        = 32'h20f0_0000;
+localparam SEQ_REC_RST_HIGHADDR        = 32'h2ff0_0000;
+
 
 
 wire main_clk, DCD_FSYNC;
@@ -179,7 +189,7 @@ external_to_internal_data u_external_to_internal_data (
 	.SW_DES(SW_DATA),
 	
 	.DCD_R2S(DCD_R2S),
-	.R2S_DES(ROW2SYNC_DATA),
+	.R2S_DES(),
 	.DCD_R2S_BUFF(DCD_R2S_BUFF),
 	
 	.DCD_FSYNC(GPIO_0),
@@ -290,12 +300,12 @@ seq_gen #( .BASEADDR(SEQ_GEN_BASEADDR),
 // Switcher and Offset 
 wire [4*8*2-1:0] DI_DATA;
 assign DI_DATA = {DI7_i,DI6_i,DI5_i,DI4_i,DI3_i,DI2_i,DI1_i,DI0_i};
-seq_rec #( .BASEADDR(SEQ_REC_BASEADDR), 
-		   .HIGHADDR(SEQ_REC_HIGHADDR),
+seq_rec #( .BASEADDR(SEQ_REC_OFFSET_BASEADDR), 
+		   .HIGHADDR(SEQ_REC_OFFSET_HIGHADDR),
 		   .ABUSWIDTH(32),
-		   .MEM_BYTES(16*1024), 
-		   .IN_BITS(256)
-	) i_seq_rec
+		   .MEM_BYTES(8*8*256), 
+		   .IN_BITS(64)
+	) i_seq_rec_offset
 (
     .BUS_CLK(BUS_CLK),
     .BUS_RST(BUS_RST),
@@ -306,9 +316,33 @@ seq_rec #( .BASEADDR(SEQ_REC_BASEADDR),
 	 
 	.SEQ_EXT_START(switcher_pulse),
     .SEQ_CLK(CLK_80),
-    .SEQ_IN({128'b0, 44'b0,ROW2SYNC_DATA,SW_DATA,DI_DATA})
+    .SEQ_IN(DI_DATA)
 );
 
+// Switcher and Offset 
+wire [4*4-1:0] SWITCHER_DATA;
+assign SWITCHER_DATA = SW_DATA;
+seq_rec #( .BASEADDR(SEQ_REC_SWITCHER_BASEADDR), 
+		   .HIGHADDR(SEQ_REC_SWITCHER_HIGHADDR),
+		   .ABUSWIDTH(32),
+		   .MEM_BYTES(2*8*256), 
+		   .IN_BITS(16)
+	) i_seq_rec_switcher
+	(
+		.BUS_CLK(BUS_CLK),
+		.BUS_RST(BUS_RST),
+		.BUS_ADD(BUS_ADD),
+		.BUS_DATA(BUS_DATA),
+		.BUS_RD(BUS_RD),
+		.BUS_WR(BUS_WR),
+	 
+		.SEQ_EXT_START(switcher_pulse),
+		.SEQ_CLK(CLK_80),
+		.SEQ_IN(SWITCHER_DATA)
+	);
+
+
+/*
 wire i2c_error;
 i2c #( .BASEADDR(I2C_BASEADDR), 
 	   .HIGHADDR(I2C_HIGHADDR),
@@ -402,5 +436,5 @@ jtag i_dcd_jtag(
 	.data_output_stream6_fromCore(8'b0),
 	.data_output_stream7_fromCore(8'b0)
 );
-
+*/
 endmodule
