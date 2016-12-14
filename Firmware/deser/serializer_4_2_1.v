@@ -61,13 +61,13 @@ module serializer_4_2_1
    parameter dev_w = 4)
  (
   // From the device out to the system
-  input  [dev_w-1:0] DATA_OUT_FROM_DEVICE,
-  output [sys_w-1:0] DATA_OUT_TO_PINS,
-  input  [sys_w-1:0] DISABLE_IO,     // disable output buffers
-  input              CLK_DIV_IN,    // Slow clock input from PLL/MMCM
-  input              IO_RESET,
-  input SERDESSTROBE,
-  input IOCLK
+  input  wire [dev_w-1:0] DATA_OUT_FROM_DEVICE,
+  output wire [sys_w-1:0] DATA_OUT_TO_PINS,
+  input  wire [sys_w-1:0] DISABLE_IO,     // disable output buffers
+  input  wire             CLK_DIV_IN,    // Slow clock input from PLL/MMCM
+  input  wire             IO_RESET,
+  input wire SERDESSTROBE,
+  input wire IOCLK
   );
   localparam         num_serial_bits = dev_w/sys_w;
   // Signal declarations

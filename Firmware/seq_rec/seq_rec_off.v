@@ -7,7 +7,7 @@
 `timescale 1ps/1ps
 `default_nettype none
  
-module seq_rec
+module seq_rec_off
 #(
     parameter BASEADDR = 0,
     parameter HIGHADDR = 0,

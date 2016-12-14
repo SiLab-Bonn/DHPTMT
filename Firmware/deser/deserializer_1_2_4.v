@@ -64,12 +64,12 @@ module deserializer_1_2_4
     parameter buff_idx = 0)
  (
   // From the system into the device
-  input  [sys_w-1:0] DATA_IN_FROM_PINS,
+  input  wire [sys_w-1:0] DATA_IN_FROM_PINS,
   output reg [dev_w-1:0] DATA_IN_TO_DEVICE,
-  input              CLK_DIV_IN,    // Slow clock input from PLL/MMCM
-  input              IO_RESET,
-  input SERDESSTROBE,
-  input IOCLK,
+  input wire              CLK_DIV_IN,    // Slow clock input from PLL/MMCM
+  input wire              IO_RESET,
+  input wire SERDESSTROBE,
+  input wire IOCLK,
   
   output wire out_buff
   );
