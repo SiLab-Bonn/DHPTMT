@@ -73,7 +73,7 @@ module deserializer_1_2_4
   
   output wire out_buff
   );
-  assign out_buff = data_in_from_pins_delay[buff_idx]
+  assign out_buff = data_in_from_pins_delay[buff_idx];
   
   localparam         num_serial_bits = dev_w/sys_w;
   // Signal declarations

@@ -182,7 +182,7 @@ generate
     end else begin
          wire [7:0] douta;
           
-        seq_rec_blk_mem memout(
+        blk_mem_seq_rec_sw memout(
             .clka(BUS_CLK), .clkb(SEQ_CLK), .douta(douta), .doutb(), 
             .wea(WEA), .web(WEB), .addra(memout_addra), .addrb(memout_addrb), 
             .dina(BUS_DATA_IN), .dinb(SEQ_IN)
