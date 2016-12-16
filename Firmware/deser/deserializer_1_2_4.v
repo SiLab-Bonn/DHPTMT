@@ -71,9 +71,9 @@ module deserializer_1_2_4
   input wire SERDESSTROBE,
   input wire IOCLK,
   
-  output wire out_buff
+  output wire BUFFED_OUT
   );
-  assign out_buff = data_in_from_pins_delay[buff_idx];
+  assign BUFFED_OUT = data_in_from_pins_delay[buff_idx];
   
   localparam         num_serial_bits = dev_w/sys_w;
   // Signal declarations

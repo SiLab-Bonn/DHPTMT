@@ -146,9 +146,6 @@ deserializer_1_2_4 #(
 );
 
 
-
-
-
 ////////////////////////// BANK1 //////////////////////////
 ///////////////////////////////////////////////////////////
 //Signal assignments to pins of bank 1 
@@ -181,7 +178,7 @@ serializer_4_2_1#(
   ////////////////////////////////////////////////////////////////
   ////////////////////////// Outputs /////////////////////////////
   // Mapping: DOX[Y] -> DISABLE_DO[X*8+Y]
-  .DISABLE_IO({DISABLE_DO[31:24],DISABLE_DO[38:32],DISABLE_DO[41:40]}),
+  .DISABLE_IO({DISABLE_DO[31:24],DISABLE_DO[39:32],DISABLE_DO[41:40]}),
   .DATA_OUT_TO_PINS({DO3,DO4,DO5[1:0]})
 );
 
@@ -312,7 +309,8 @@ deserializer_1_2_4 #(
   .SERDESSTROBE(SERDESSTROBE_B3),
   ////////////////////////////////////////////////////////////////
   ////////////////////////// Outputs /////////////////////////////
-  .DATA_IN_TO_DEVICE({DI7_i,R2S_DES})
+  .DATA_IN_TO_DEVICE({DI7_i,R2S_DES}),
+  .BUFFED_OUT(DCD_R2S_BUFF)
 );
 
 wire SW_GATE;
@@ -322,8 +320,8 @@ wire SW_CLK;
 
 //For switcher sequence
 deserializer_1_2_4 #(
-  .sys_w(4), 
-  .dev_w(16), .NOIBUF(1)
+  .sys_w((1+1+1+1+1)), 
+  .dev_w((1+1+1+1+1)*4), .NOIBUF(1)
 ) u_deserializer_SW(
    ////////////////////////////////////////////////////////////////
   ////////////////////////// Inputs //////////////////////////////
@@ -334,7 +332,8 @@ deserializer_1_2_4 #(
   .SERDESSTROBE(SERDESSTROBE_B3),
   ////////////////////////////////////////////////////////////////
   ////////////////////////// Outputs //////////////////////////////
-  .DATA_IN_TO_DEVICE({SW_DES[15:0],FSYNC_DES})
+  .DATA_IN_TO_DEVICE({SW_DES[15:0],FSYNC_DES}),
+  .BUFFED_OUT(DCD_FSYNC_BUFF)
 );
 
 
