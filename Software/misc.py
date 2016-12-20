@@ -226,14 +226,11 @@ def send_to_Mr_Cookie(failedChipNumber):
 def updatePortInYaml(filename):
     logging.info("%s\tUpdating config file",__name__)
     currActivePort = subprocess.Popen('ls /dev/ttyUSB*', stdout=subprocess.PIPE, shell=True)
-    #print currActivePort.stdout.read()
-    
+    ports = currActivePort.stdout.read().split()
+
     stream = open(filename,'r')
     dictObj = yaml.load(stream)
-    tmp = currActivePort.stdout.read()
-    if "\n" in tmp:
-        tmp = tmp[:-1]
-    dictObj['transfer_layer'][0]['init']['port'] = tmp
+    dictObj['transfer_layer'][0]['init']['port'] = ports[-1]
     
     with open(filename, 'w') as yaml_file:
         yaml_file.write(yaml.dump(dictObj, default_flow_style=True))

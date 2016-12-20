@@ -40,12 +40,13 @@ class PROBECARD(Dut):
 
     def reset_all_modules(self):
         logging.info("%s\tModule Reset",__name__)
-        self['SEQ_REC'].reset()
+        self['SEQ_REC_OFF'].reset()
+        self['SEQ_REC_SW'].reset()
+        self['SEQ_REC_RST'].reset()
         self['SEQ_GEN'].reset()
         self['I2C'].reset()
         self['GPIO'].reset()
-        self['PULSER_GEN'].reset()
-        self['PULSER_REC'].reset()
+        self['PULSER_FSYNC'].reset()
         self['PULSER_R2S'].reset()
 
     def setup_to_idle(self):

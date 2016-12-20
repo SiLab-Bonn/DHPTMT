@@ -123,7 +123,6 @@ clock_divider #(.DIVISOR(UART_CLK_DIVISOR)
 	.CLOCK(BUS_CLK)
 );
 
-
 wire	[31:0] DO0_i;  wire [7:0] DI0_i; 
 wire	[31:0] DO1_i;  wire [7:0] DI1_i; 
 wire	[31:0] DO2_i;  wire [7:0] DI2_i; 

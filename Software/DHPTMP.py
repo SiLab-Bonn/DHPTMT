@@ -3,7 +3,7 @@ from slowcontrol import *
 from Probecard import PROBECARD
 #from dhh import mapping
 #from pyDepfetReader.file_reader import FileReader
-from misc import initiate_logger, printProgress
+from misc import initiate_logger, printProgress, updatePortInYaml
 from basil.dut import Dut
 from __builtin__ import True
 
@@ -204,9 +204,10 @@ class DHPTMP(PROBECARD):
         self.sc         = SlowControl()
   
         self.logger = initiate_logger(logFileDir, softwareVersion, dhptVersion, True)
-        #PROBECARD.__init__(self, config)
         self.psu1.init()
         self.psu2.init()
+        updatePortInYaml(config)
+        PROBECARD.__init__(self, config)
 	
     def init_voltages(self):
         self.set_VDD_voltage()
@@ -310,7 +311,7 @@ class DHPTMP(PROBECARD):
         else:
             self.psu1["PowerSupply1"].off(channel=ch)
 
-    def set_VCC_voltage(self, v=2.5, on=False):
+    def set_VCC_voltage(self, v=3.3, on=False):
         val= v
         ch = 2
         self.psu1["PowerSupply1"].set_ocp(0.5, channel=ch)
