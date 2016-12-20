@@ -324,20 +324,35 @@ class DHPTMP(PROBECARD):
 
     def get_VDD_current(self):
         ch=1
-        return float(self.psu2['PowerSupply2'].get_current(channel=ch)[0:3])
+        return float(self.psu2['PowerSupply2'].get_current(channel=ch)[0:-3])
 
     def get_DVDD_current(self):
         ch=2
-        return float(self.psu2['PowerSupply2'].get_current(channel=ch)[0:3])
+        return float(self.psu2['PowerSupply2'].get_current(channel=ch)[0:-3])
         
     def get_DHE_current(self):
         ch=1
-        return float(self.psu1['PowerSupply1'].get_current(channel=ch)[0:3])
+        return float(self.psu1['PowerSupply1'].get_current(channel=ch)[0:-3])
     
     def get_VCC_current(self):
         ch=2
-        return float(self.psu1['PowerSupply1'].get_current(channel=ch)[0:3])
+        return float(self.psu1['PowerSupply1'].get_current(channel=ch)[0:-3])
+    
+    def get_VDD_voltage(self):
+        ch=1
+        return float(self.psu2['PowerSupply2'].get_voltage(channel=ch)[0:-3])
 
+    def get_DVDD_voltage(self):
+        ch=2
+        return float(self.psu2['PowerSupply2'].get_voltage(channel=ch)[0:-3])
+        
+    def get_DHE_voltage(self):
+        ch=1
+        return float(self.psu1['PowerSupply1'].get_voltage(channel=ch)[0:-3])
+    
+    def get_VCC_voltage(self):
+        ch=2
+        return float(self.psu1['PowerSupply1'].get_voltage(channel=ch)[0:-3])
 
     def test_power_consumption(self):
         self.logger.info("Power; Power Consumption Test")

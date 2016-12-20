@@ -16,15 +16,7 @@ if __name__ == "__main__":
     CHECK:    POWER CONSUMPTION
     '''
     isPowerOK = mp.test_power_consumption()
-    if not isPowerOK:
-       tester = ""
-       while (tester != "quit") or (tester != "ok"):
-           tester = raw_input("---error---error---error---error---error---error---\npower consumption test failed!! please check bump connection!\noptions:\n\t-to continue type 'ok'\n\t-to quit test type 'quit'")
-           if tester == "quit":
-               logging.warning("test abort!")
-               sys.exit(-1)
-           elif tester == "ok":
-               pass
+
 #===============================================================================
 #     
 #     mp.set_dcd_ref_voltage(voltage=0.9, unit="V")
