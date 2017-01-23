@@ -44,18 +44,18 @@ class PROCESS_VAR_JTAG():
         #print "PXD:H1031:D" + str(dhpt_id) + ":" + self._func_reg_name + ":VALUE:set"
         if isPv:
             if self._func_reg_name == "chip_id":
-                self._setVal     = PV("PXD:H1031:D" + str(dhpt_id) + ":" + self._func_reg_name + ":ID:set")       #Value to be
-                self._getVal     = PV("PXD:H1031:D" + str(dhpt_id) + ":" + self._func_reg_name + ":ID:cur")       #Value as is    
+                self._setVal     = PV("PXD:H1032:D" + str(dhpt_id) + ":" + self._func_reg_name + ":ID:set")       #Value to be
+                self._getVal     = PV("PXD:H1032:D" + str(dhpt_id) + ":" + self._func_reg_name + ":ID:cur")       #Value as is    
             else:
                 if self._func_reg_size == 1:
-                    self._setVal     = PV("PXD:H1031:D" + str(dhpt_id) + ":" + self._func_reg_name + ":S:set")       #Value to be
-                    self._getVal     = PV("PXD:H1031:D" + str(dhpt_id) + ":" + self._func_reg_name + ":S:cur")       #Value as is    
+                    self._setVal     = PV("PXD:H1032:D" + str(dhpt_id) + ":" + self._func_reg_name + ":S:set")       #Value to be
+                    self._getVal     = PV("PXD:H1032:D" + str(dhpt_id) + ":" + self._func_reg_name + ":S:cur")       #Value as is    
                 else:
-                    self._setVal     = PV("PXD:H1031:D" + str(dhpt_id) + ":" + self._func_reg_name + ":VALUE:set")       #Value to be
-                    self._getVal     = PV("PXD:H1031:D" + str(dhpt_id) + ":" + self._func_reg_name + ":VALUE:cur")       #Value as is    
+                    self._setVal     = PV("PXD:H1032:D" + str(dhpt_id) + ":" + self._func_reg_name + ":VALUE:set")       #Value to be
+                    self._getVal     = PV("PXD:H1032:D" + str(dhpt_id) + ":" + self._func_reg_name + ":VALUE:cur")       #Value as is    
         else:
-            self._setVal     = PV("PXD:H1031:D" + str(dhpt_id) + ":" + self._func_reg_name + ":trg:set")       #Value to be
-            self._getVal     = PV("PXD:H1031:D" + str(dhpt_id) + ":" + self._func_reg_name + "_dispatch:trg:cur")       #Value as is   
+            self._setVal     = PV("PXD:H1032:D" + str(dhpt_id) + ":" + self._func_reg_name + ":trg:set")       #Value to be
+            self._getVal     = PV("PXD:H1032:D" + str(dhpt_id) + ":" + self._func_reg_name + "_dispatch:trg:cur")       #Value as is   
             
     #set and get pv value        
     ############################
@@ -188,18 +188,18 @@ class JTAG_REGS():
                                             "pll_cml_dly_sel"           : PROCESS_VAR_JTAG(dhpt_id , REGISTER("pll_cml_dly_sel",            2)),
                                             "ser_lfsr_rb"               : PROCESS_VAR_JTAG(dhpt_id , REGISTER("ser_lfsr_rb")),
                                             
-                                            "IDAC_CML_TX_BIAS"          : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_CML_TX_BIAS",           8)),
-                                            "IDAC_CML_TX_BIASD"         : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_CML_TX_BIASD",          8)),
-                                            "IDAC_CML_TX_IBIASDELAY"    : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_CML_TX_IBIASDELAY",     8)),
-                                            "IDAC_DCD_RX_IREF"          : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_DCD_RX_IREF",           8)),
-                                            "IDAC_DIODE"                : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_DIODE",                 8)),
-                                            "IDAC_LVDS_RX_IREF"         : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_LVDS_RX_IREF",          8)),
-                                            "IDAC_LVDS_TX_IREF"         : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_LVDS_TX_IREF",          8)),
-                                            "IDAC_PLL_I50U"             : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_PLL_I50U",              8)),
-                                            "IDAC_PLL_ICP"              : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_PLL_ICP",               8)),
-                                            "IDAC_PLL_IVCO"             : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_PLL_IVCO",              8)),
-                                            "IDAC_TEST"                 : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IDAC_TEST",                  8)),
-                                            "IREF_TRIMMING"             : PROCESS_VAR_JTAG(dhpt_id , REGISTER("IREF_TRIMMING",              4))
+                                            "IDAC_CML_TX_BIAS"          : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_cml_tx_bias",           8)),
+                                            "IDAC_CML_TX_BIASD"         : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_cml_tx_biasd",          8)),
+                                            "IDAC_CML_TX_IBIASDELAY"    : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_cml_tx_ibiasdelay",     8)),
+                                            "IDAC_DCD_RX_IREF"          : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_dcd_rx_iref",           8)),
+                                            "IDAC_DIODE"                : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_diode",                 8)),
+                                            "IDAC_LVDS_RX_IREF"         : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_lvds_rx_iref",          8)),
+                                            "IDAC_LVDS_TX_IREF"         : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_lvds_tx_iref",          8)),
+                                            "IDAC_PLL_I50U"             : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_pll_i50u",              8)),
+                                            "IDAC_PLL_ICP"              : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_pll_icp",               8)),
+                                            "IDAC_PLL_IVCO"             : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_pll_ivco",              8)),
+                                            "IDAC_TEST"                 : PROCESS_VAR_JTAG(dhpt_id , REGISTER("idac_test",                  8)),
+                                            "IREF_TRIMMING"             : PROCESS_VAR_JTAG(dhpt_id , REGISTER("iref_trimming",              4))
                                             }, 
                                     "dispatch" : PROCESS_VAR_JTAG(dhpt_id , REGISTER("globalreg",-1), False)},
         
@@ -300,19 +300,19 @@ class JTAG_REGS():
         
         #GLOBAL_REG
         if self.JTAG_REGISTERS['GLOBAL']['pv']["tdo_tx_set06"].pvSet.connected:
-            self.JTAG_REGISTERS['GLOBAL']['pv']["tdo_tx_set06"].set_value(1)
+            self.JTAG_REGISTERS['GLOBAL']['pv']["tdo_tx_set06"].set_value(0)
         if self.JTAG_REGISTERS['GLOBAL']['pv']["tdo_tx_set12"].pvSet.connected:
-            self.JTAG_REGISTERS['GLOBAL']['pv']["tdo_tx_set12"].set_value(1)
+            self.JTAG_REGISTERS['GLOBAL']['pv']["tdo_tx_set12"].set_value(0)
         if self.JTAG_REGISTERS['GLOBAL']['pv']["tdo_tx_set30"].pvSet.connected:
-            self.JTAG_REGISTERS['GLOBAL']['pv']["tdo_tx_set30"].set_value(1)
+            self.JTAG_REGISTERS['GLOBAL']['pv']["tdo_tx_set30"].set_value(0)
            
         if self.JTAG_REGISTERS['GLOBAL']['pv']["pll_des_clk_sel"].pvSet.connected:
             self.JTAG_REGISTERS['GLOBAL']['pv']["pll_des_clk_sel"].set_value(1)
         
         if self.JTAG_REGISTERS['GLOBAL']['pv']["IDAC_CML_TX_BIAS"].pvSet.connected:
-            self.JTAG_REGISTERS['GLOBAL']['pv']["IDAC_CML_TX_BIAS"].set_value(127)
+            self.JTAG_REGISTERS['GLOBAL']['pv']["IDAC_CML_TX_BIAS"].set_value(255)
         if self.JTAG_REGISTERS['GLOBAL']['pv']["IDAC_CML_TX_BIASD"].pvSet.connected:
-            self.JTAG_REGISTERS['GLOBAL']['pv']["IDAC_CML_TX_BIASD"].set_value(48)
+            self.JTAG_REGISTERS['GLOBAL']['pv']["IDAC_CML_TX_BIASD"].set_value(128)
         if self.JTAG_REGISTERS['GLOBAL']['pv']["IDAC_CML_TX_IBIASDELAY"].pvSet.connected:
             self.JTAG_REGISTERS['GLOBAL']['pv']["IDAC_CML_TX_IBIASDELAY"].set_value(50)
        
@@ -338,16 +338,16 @@ class JTAG_REGS():
             self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_jtag_en_out"].set_value(0)
         
         if self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_clk"].pvSet.connected:
-            self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_clk"].set_value(1)
+            self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_clk"].set_value(0)
             
         if self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_diff_clk"].pvSet.connected:
             self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_diff_clk"].set_value(0)    
         
         if self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_frame_sync"].pvSet.connected:
-            self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_frame_sync"].set_value(1)
+            self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_frame_sync"].set_value(0)
             
         if self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_row_sync"].pvSet.connected:
-            self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_row_sync"].set_value(1)    
+            self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_sync_en_row_sync"].set_value(0)    
         
         if self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_clk_set06"].pvSet.connected:
             self.JTAG_REGISTERS['GLOBAL']['pv']["dcd_clk_set06"].set_value(1)  
@@ -377,7 +377,7 @@ class JTAG_REGS():
         if self.JTAG_REGISTERS['OUT CONFIGURE']['pv']["how_long_align"].pvSet.connected:
             self.JTAG_REGISTERS['OUT CONFIGURE']['pv']["how_long_align"].set_value(400)
         if self.JTAG_REGISTERS['OUT CONFIGURE']['pv']["double_out_bits"].pvSet.connected:
-            self.JTAG_REGISTERS['OUT CONFIGURE']['pv']["double_out_bits"].set_value(1)
+            self.JTAG_REGISTERS['OUT CONFIGURE']['pv']["double_out_bits"].set_value(0)
         
         for key in self.JTAG_REGISTERS:
             if key not in excludedBlocks:

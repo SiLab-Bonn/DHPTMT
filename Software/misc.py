@@ -6,12 +6,35 @@ from shutil import move
 import time
 import array
 import yaml
+import os
 import subprocess
-
 import sys
 import numpy as np
 from struct import unpack, unpack_from, pack
 from email.mime.text import MIMEText
+import matplotlib.pyplot as pl
+import matplotlib as mpl
+import numpy as np
+from argparse import ArgumentParser
+import configparser
+import os
+import sys
+import math
+from matplotlib.backends.backend_pdf import PdfPages
+import config_utils
+import dhp_utils
+import matplotlib.ticker as tick
+
+
+
+def programFPGA():
+    #os.system('source /opt/Xilinx/14.7/LabTools/settings64.sh')
+    p = subprocess.Popen(['source /opt/Xilinx/14.7/LabTools/settings64.sh; impact -batch /home/user/git/DHPTMP/Software/program_probecard.cmd'], stdout=subprocess.PIPE, shell=True)
+    out, err = p.communicate()
+    ret = False
+    if 'Programmed successfully' in out:
+        ret = True
+    return ret
 
 def replace(file_path, pattern, subst):
     #Create temp file
@@ -26,7 +49,7 @@ def replace(file_path, pattern, subst):
     #Move new file
     move(abs_path, file_path)
 
-def initiate_logger(outputDirectory, testRevision, dhptVersion ,write2file=False):
+def initiate_logger(outputDirectory, testRevision, dhptVersion):
     if not os.path.exists(outputDirectory):
         os.makedirs(outputDirectory)
     
@@ -43,37 +66,60 @@ def initiate_logger(outputDirectory, testRevision, dhptVersion ,write2file=False
         logger.error("DHPT VERSION %s IS UNKNOWN!!", dhpt)
         sys.exit(-1)
         
-    logger = logging.getLogger("DHPT Probe software")
-    logger.setLevel(logging.DEBUG)
-    
     dhptID = open("/home/user/NeedleCardTest/Data/" + dhpt + "/dhptID.id", "rw")
     chipID = dhptID.read()
 
-    '''
-    Output to the console
-    '''
-    handler1 = logging.StreamHandler()
-    handler1.setLevel(logging.DEBUG)
+    logging.basicConfig()
     formatter = logging.Formatter("%(levelname)s\t %(message)s")
-    handler1.setFormatter(formatter)
-    logger.addHandler(handler1)
-    
+    rootLogger = logging.getLogger("log")
     '''
     Output to the LogFile
     '''
-    if write2file:
-        handler2 = logging.FileHandler(os.path.join(outputDirectory, "chip_%s.log"%chipID), 'w', encoding=None, delay="true")
-        handler2.setLevel(logging.DEBUG)
-        handler2.setFormatter(formatter)
-        logger.addHandler(handler2)
-        
-        logger.info("CHIP ID %s",chipID)
-        replace("/home/user/NeedleCardTest/Data/" + dhpt + "/dhptID.id", chipID, "%d"%(int(chipID)+1))
+    fileHandler = logging.FileHandler(os.path.join(outputDirectory, "chip_%s.log"%chipID), 'w', encoding=None, delay="true")
+    fileHandler.setLevel(logging.DEBUG)
+    fileHandler.setFormatter(formatter)
+    rootLogger.addHandler(fileHandler)
    
-    logger.info("SOFTWARE REVISION %s - (%s/%s by Leonard Germic, SiLab/Uni Bonn)"%(testRevision, time.localtime().tm_year, time.localtime().tm_mon))
-      
-    return logger
+    '''
+    Output to the console
+    '''
+    consoleHandler = logging.StreamHandler(sys.stdout)
+    consoleHandler.setLevel(logging.DEBUG)
+    consoleHandler.setFormatter(formatter)
+    rootLogger.addHandler(consoleHandler)
+        
+    rootLogger.info("%s\tCHIP ID %s",__name__,chipID)
+    replace("/home/user/NeedleCardTest/Data/" + dhpt + "/dhptID.id", chipID, "%d"%(int(chipID)+1))
+   
+    rootLogger.info("%s\tSOFTWARE REVISION %s - (%s/%s by Leonard Germic, SiLab/Uni Bonn)",__name__,testRevision, time.localtime().tm_year, time.localtime().tm_mon)
+
+def chipID(ID='DHP12B.A00W01'):
+    rows = ['A','B','C','D','E','F','G','H','I','J']
+    row = ID[-6]
+    col = int(ID[-5]+ID[-4])
+    wafer = int(ID[-2]+ID[-1])
+    print 'r %s, c %s, w %s'%(row,col,wafer) 
     
+    lid = list(ID)
+    
+    if 10 > col:
+        lid[-5] = '%02d'%(col+1)[0]
+        lid[-4] = '%02d'%(col+1)[1]
+    else:
+        lid[-5] = str(0)
+        lid[-4] = str(0)
+        if (rows.index(row) > len(rows)-2): 
+            lid[-6] = rows.index(0)
+        else:
+            lid[-6] = rows(rows.index(row)+1)
+            lid[-2] = '%02d'%(wafer+1)[0]
+            lid[-1] = str(wafer+1)[1]
+            
+    return str(lid)
+        
+    
+    
+           
 def query_dict(nested_dict):
     return [value for key, value in nested_dict.iteritems()]
 
@@ -245,4 +291,288 @@ def printProgress(it, tot, prefix='Progress:', suffix='Complete', decimals=0, ba
         sys.stdout.write('\n')
     sys.stdout.flush()
                   
+ 
+################## plot Bias vs Biasd #############################
+def plot_cml(pdf, data, bias, biasd):
+
+    # label biasd axis correctly
+    def tick_biasd(x, y):
+        # we do not want wrong and strange values for negative values
+        if x<0 or x>(len(biasd)-1):
+            return
+        else:
+            return '%d' % (biasd[int(x)])
+
+    # label bias axis correctly
+    def tick_bias(x, y):
+        if x<0 or x>(len(bias)-1):
+            return
+        else:
+            return '%d' % (bias[int(x)])
+
+    figure, (ax1, ax2) = pl.subplots(2, 2, sharex=False, sharey=False, figsize = (11.69, 8.27))
+    figure.suptitle("IV curve VDD", fontsize=14)
+    axes=ax1[0]
+    axes.set_xlim([0,255])
+    axes.set_xlabel("Bias DAC")
+    axes.set_ylabel("IVDD [mA]")
+    off = np.min(data[0,0])
+    for bd in biasd:
+        d = []
+        for v in data[:,bd]:
+            if v!=0:
+                d.append(v)
+        axes.plot(bias, d-off, linestyle='-', marker='x', markersize=1)
+    axes.plot([0,255], [np.min(data[255,0])-off,np.min(data[255,0])-off], linestyle='-', marker='', linewidth=2)
     
+    axes=ax1[1]
+    axes.set_xlim([0,255])
+    axes.set_xlabel("Biasd DAC")
+    axes.set_ylabel("IVDD [mA]")
+    for b in bias:
+        d = []
+        for v in data[b,:]:
+            if v!=0:
+                d.append(v)
+        axes.plot(biasd, d-off, linestyle='-', marker='x', markersize=1)
+    axes.plot([0,255], [np.min(data[0,255])-off,np.min(data[0,255])-off], linestyle='-', marker='', linewidth=2)
+    
+        
+    axes=ax2[0]
+    axes.set_xlabel("Bias DAC")
+    axes.set_ylabel("Biasd DAC")
+    #axes.imshow(data[:,:,int(i)-1], aspect='auto',  cmap=pl.cm.RdYlGn, interpolation='nearest', vmin=0, vmax=vmax)#,  extent=[bias_start, bias_stop, biasd_start, biasd_stop])
+    cmap = mpl.cm.get_cmap("jet")
+    #
+    vmax = np.max(data)
+    data = data.astype(int).astype(float)
+    data[data==0]=np.nan
+    axes.imshow(np.transpose(data[:,:])-off, aspect='auto',  cmap=cmap,interpolation='None',\
+            vmin=0, vmax=vmax-off,  origin='lower')
+    axes.tick_params(axis='both', which='major', labelsize=10)
+    # this is stupid! it sets labels at every step
+    # if you have a larger range you do not see anything!
+    #axes.set_xticks(np.ndarray.tolist(np.arange(len(biasd))))
+    #axes.set_xticklabels(biasd)
+    #axes.set_yticks(np.ndarray.tolist(np.arange(len(bias))))
+    #axes.set_yticklabels(bias)
+    # we take the labels which there are and replace them smartly
+    axes.xaxis.set_major_formatter(tick.FuncFormatter(tick_bias))
+    axes.yaxis.set_major_formatter(tick.FuncFormatter(tick_biasd))
+    #xlabel="Bias"
+    #ylabel="Bias d"
+    #figure.text(0.05, 0.05 + 0.9/2, ylabel, ha="left", va="center", rotation="vertical", fontsize=12)
+    #figure.text(0.05 + (0.92-0.05)/2, 0.01, xlabel, ha="center", va="bottom", fontsize=12)
+    # Colorbar
+    axes.contour(data, [0,20], linewidths=2, cmap=cmap)    
+    cb_ax = figure.add_axes([0.91, 0.05, 0.02, 0.9])
+    norm = mpl.colors.Normalize(vmin=0 , vmax=vmax-off )
+    cb = mpl.colorbar.ColorbarBase(cb_ax, cmap=cmap, norm=norm, orientation='vertical')
+    cb.set_label("VDD current [mA]")
+    # save to pdf
+    
+    pdf.savefig(figure)
+    
+
+################## plot Bias vs Biasd #############################
+def plot_bias_biasd(pdf, path, bias, biasd, biasdly, vmax=31):
+    
+    import matplotlib.pyplot as pl
+    import matplotlib as mpl
+    import numpy as np
+    from argparse import ArgumentParser
+    import configparser
+    import os
+    import sys
+    import math
+    from matplotlib.backends.backend_pdf import PdfPages
+    import config_utils
+    import dhp_utils
+    import matplotlib.ticker as tick
+            
+    # label biasd axis correctly
+    def tick_biasd(x, y):
+        # we do not want wrong and strange values for negative values
+        if x<0 or x>(len(biasd)-1):
+            return
+        else:
+            return '%d' % (biasd[int(x)])
+
+    # label bias axis correctly
+    def tick_bias(x, y):
+        if x<0 or x>(len(bias)-1):
+            return
+        else:
+            return '%d' % (bias[int(x)])
+
+    def dhp_bug(bias_delay_item):
+        """
+        dhp manual:
+        [3] minimum (is non zero due to propagation delay).
+        [1] larger than [3]
+        [2] larger than [1]
+        [0] maximum
+        """
+        dict = {0:3, 1:2, 2:1, 3:0}
+        return dict[bias_delay_item]
+
+    figure, axs = pl.subplots(2, 2, sharex=False, sharey=False, figsize = (11.69, 8.27))
+    figure.suptitle("Aurora link scan", fontsize=14)
+    
+    for bd in biasdly:
+        filename = "pll_cml_dly_sel%d.npz" % bd
+        print 'plot', filename
+        loaded_data = np.load(os.path.join(path, filename))
+        data=loaded_data['data']
+        tmp = np.zeros( (len(bias),len(biasd),2,4) ) 
+        for j in range(len(biasd)):
+            tmp[:,j,:,:] = data[:,biasd[0]+j*(biasd[1]-biasd[0]),:,:]    
+       
+        row = int(bd/2)
+        column = int(bd%2)
+        axes=axs[row,column]
+       
+        cmap = mpl.cm.get_cmap("jet")
+        axes.set_title("dly %d"%bd, fontsize=10)
+        axes.imshow(get_rid_of_isolated_spots_in_data(tmp[:,:,1,0]*tmp[:,:,0,0])[1], aspect='auto',  cmap=cmap,interpolation='none',\
+                vmin=0, vmax=vmax,  origin='lower')
+       
+        axes.tick_params(axis='both', which='major', labelsize=10)
+      
+        axes.xaxis.set_major_formatter(tick.FuncFormatter(tick_biasd))
+        axes.yaxis.set_major_formatter(tick.FuncFormatter(tick_bias))
+        xlabel="Bias d"
+        ylabel="Bias"
+        figure.text(0.05, 0.05 + 0.9/2, ylabel, ha="left", va="center", rotation="vertical", fontsize=12)
+        figure.text(0.05 + (0.92-0.05)/2, 0.01, xlabel, ha="center", va="bottom", fontsize=12)
+        # Colorbar
+        cb_ax = figure.add_axes([0.91, 0.05, 0.02, 0.9])
+        norm = mpl.colors.Normalize(vmin=0 , vmax=vmax )
+        #axes.contour(get_rid_of_isolated_spots_in_data(tmp[:,:,0,0])[0]*get_rid_of_isolated_spots_in_data(tmp[:,:,1,0])[1], [30], linewidths=2, cmap=cmap, norm=norm)
+        #axes.contour(get_rid_of_isolated_spots_in_data(tmp[:,:,0,0])[1], [0,1], linewidths=3, colors=('red'))#, cmap='gray', norm=norm)
+        cb = mpl.colorbar.ColorbarBase(cb_ax, cmap=cmap, norm=norm, orientation='vertical')
+        cb.set_label("Eye Diagram")
+    # save to pdf
+    pdf.savefig(figure)
+    
+def get_rid_of_isolated_spots_in_data(data):
+    idxs = np.where(data==0)
+    masked = data
+    interpolated_data = data
+    for idx in idxs:
+        if not len(idx)==0:
+            if idx[0]>0 and (masked.shape[0]-2)>idx[0] and idx[1]>0 and (masked.shape[1]-2)>idx[1]:
+                if ((0==masked[idx[0]+1,idx[1]-1]) and (0==masked[idx[0]+1,idx[1]+1]) and (0==masked[idx[0]-1,idx[1]-1]) and (0==masked[idx[0]-1,idx[1]+1])):
+                    masked[idx] = np.nan
+                    interpolated_data[idx] = 0.25*(interpolated_data[idx[0]+1,idx[1]-1] + interpolated_data[idx[0]-1,idx[1]+1] + interpolated_data[idx[0]-1,idx[1]-1] + interpolated_data[idx[0]+1,idx[1]+1])
+    return masked, interpolated_data
+    
+    
+def plot_shmoo(pdf,data, testdata, volt, freq):  
+    figure, axs = pl.subplots(2, 2, sharex=False, sharey=False, figsize = (11.69, 8.27))
+    pl.subplots_adjust(wspace=0.5)
+    figure.suptitle("IV curve VDD", fontsize=14)
+    reducedVolt = range(0,len(volt),4)
+    
+    axes=axs[0,0]
+    xlabel = "frequency"
+    ylabel = "Voltage"
+    cmap = mpl.cm.get_cmap("jet")
+    tmp = np.transpose(data[:,:,1])#*data[:,:,0])
+    tmp[tmp==0]=np.nan
+    axes.imshow(tmp, aspect='auto',  cmap=cmap,interpolation='None',\
+            vmin=np.min(tmp), vmax=np.max(tmp),  origin='lower')
+    axes.tick_params(axis='both', which='major', labelsize=10)
+    axes.set_xticks(range(len(freq)))
+    axes.set_yticks(reducedVolt)
+    axes.set_xticklabels(freq)
+    axes.set_yticklabels([volt[i] for i in reducedVolt])
+    figure.text(0.05, 0.05 + 0.9/2, ylabel, ha="left", va="center", rotation="vertical", fontsize=12)
+    figure.text(0.05 + (0.92-0.05)/2, 0.01, xlabel, ha="center", va="bottom", fontsize=12)
+    # Colorbar
+    axes.contour(tmp, [0.9,0.99,0.999], linewidths=2, colors='white')    
+    cb_ax = figure.add_axes([0.45, 0.55, 0.02, 0.35])
+    norm = mpl.colors.Normalize(vmin=np.min(tmp), vmax=np.max(tmp) )
+    cb = mpl.colorbar.ColorbarBase(cb_ax, cmap=cmap, norm=norm, orientation='vertical')
+    cb.set_label("rel. #of correct data")
+
+    axes=axs[0,1]
+    xlabel = "frequency"
+    ylabel = "Voltage"
+    cmap1 = mpl.cm.get_cmap("jet")
+    tmp = np.transpose(data[:,:,2])
+    axes.imshow(tmp, aspect='auto',  cmap=cmap1,interpolation='None',\
+            vmin=np.min(tmp), vmax=np.max(tmp),  origin='lower')
+    axes.tick_params(axis='both', which='major', labelsize=10)
+    axes.set_xticks(range(len(freq)))
+    axes.set_yticks(reducedVolt)
+    axes.set_xticklabels(freq)
+    axes.set_yticklabels([volt[i] for i in reducedVolt])
+    #figure.text(0.05, 0.05 + 0.9/2, ylabel, ha="left", va="center", rotation="vertical", fontsize=12)
+    #figure.text(0.05 + (0.92-0.05)/2, 0.01, xlabel, ha="center", va="bottom", fontsize=12)
+    # Colorbar
+    #axes.contour(data, [0,20], linewidths=2, cmap=cmap)    
+    cb_ax1 = figure.add_axes([0.91, 0.55, 0.02, 0.35])
+    norm1 = mpl.colors.Normalize(vmin=np.min(tmp), vmax=np.max(tmp) )
+    cb1 = mpl.colorbar.ColorbarBase(cb_ax1, cmap=cmap1, norm=norm1, orientation='vertical')
+    cb1.set_label("IVDD+IVDDCML [mA]")
+    
+    axes=axs[1,0]
+    xlabel = "frequency"
+    ylabel = "Voltage"
+    cmap3 = mpl.cm.get_cmap("jet")
+    tmp = np.transpose(data[:,:,3]*200.0/31.0)
+    axes.imshow(tmp, aspect='auto',  cmap=cmap1,interpolation='None',\
+            vmin=np.min(tmp), vmax=np.max(tmp),  origin='lower')
+    axes.tick_params(axis='both', which='major', labelsize=10)
+    axes.set_xticks(range(len(freq)))
+    axes.set_yticks(reducedVolt)
+    axes.set_xticklabels(freq)
+    axes.set_yticklabels([volt[i] for i in reducedVolt])
+    #figure.text(0.05, 0.05 + 0.9/2, ylabel, ha="left", va="center", rotation="vertical", fontsize=12)
+    #figure.text(0.05 + (0.92-0.05)/2, 0.01, xlabel, ha="center", va="bottom", fontsize=12)
+    # Colorbar
+    axes.contour(tmp, [150], linewidths=5, colors='white')    
+    cb_ax3 = figure.add_axes([0.45, 0.1, 0.02, 0.35])
+    norm3 = mpl.colors.Normalize(vmin=np.min(tmp), vmax=np.max(tmp) )
+    cb3 = mpl.colorbar.ColorbarBase(cb_ax3, cmap=cmap3, norm=norm3, orientation='vertical')
+    cb3.set_label("eye [mV]")
+    
+    axes=axs[1,1]
+    axes.set_title('rnd test pattern')
+    xlabel = "Column"
+    ylabel = "row"
+    tmp = np.transpose(data[:,:,4])#testdata
+    axes.imshow(tmp, aspect='auto',  cmap=cmap1,interpolation='None',\
+            vmin=np.min(tmp), vmax=np.max(tmp),  origin='lower')
+    
+    pdf.savefig(figure)
+    
+def readFile(filename,asicpair,frames=10):
+    from pyDepfetReader.file_reader import  FileReader
+    reader=FileReader(-1,1,'H1032')
+    #print filename
+    isgood = True
+    if False==reader.open(filename):
+        print "File not found: ",filename
+        raise IOError
+    nr_of_frames=0
+    frameContainer=np.zeros((256*4,64,1),dtype=np.uint16)
+    
+    for data, raw in reader:
+        if raw:
+            #print frameContainer.shape, data.shape
+            if len(frameContainer.shape) == 3:
+                frameContainer = np.concatenate((frameContainer,data[...,np.newaxis]), axis=2)
+            elif len(frameContainer.shape) == 2:
+                frameContainer = np.concatenate((frameContainer[...,np.newaxis],data[...,np.newaxis]), axis=2)
+            nr_of_frames+=1
+        if nr_of_frames==frames:
+            break
+    if nr_of_frames==0:
+        #print "No events in file",filename
+        isgood = False
+        #raise IOError
+    return frameContainer, isgood
+        
+        

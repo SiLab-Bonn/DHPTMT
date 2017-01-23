@@ -634,7 +634,7 @@ class PROBECARD(Dut):
     
     def send_testpattern_to_dhpt(self):
         logging.info("%s\tData send from FPGA to dhpt",__name__)
-        testData = get_dcd42_testpattern()
+        testData = self.get_dcd42_testpattern()
     
         self.conf_seqGen()
         
