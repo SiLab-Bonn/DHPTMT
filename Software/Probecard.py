@@ -1,14 +1,13 @@
 import logging
-
-from basil.dut import Dut
-#from dhptclasses import SW_SIGNALS_4X_TIME_MULTIPLEXED
-#from dhptclasses import OFFSET_4X_TIME_MULTIPLEXED
-#from dhptclasses import SW_SIGNALS_SEQUENCE
-#from dhptclasses import OFFSET_SIGNALS_SEQUENCE
+# from dhptclasses import SW_SIGNALS_4X_TIME_MULTIPLEXED
+# from dhptclasses import OFFSET_4X_TIME_MULTIPLEXED
+# from dhptclasses import SW_SIGNALS_SEQUENCE
+# from dhptclasses import OFFSET_SIGNALS_SEQUENCE
 import time
-import numpy as np
 from sys import exit
 
+import numpy as np
+from basil.dut import Dut
 
 ''' Function list
     <send_test_frame>       sends DCDpp test pattern to DOX[7:0] 
@@ -202,129 +201,147 @@ class PROBECARD(Dut):
         d = self['SEQ_REC_SW'].get_data(total_num_bytes)
         return [d[i*2:(i+1)*2] for i in range(seq_rec_row)] 
 
-    def get_offsetBits(self):
-        seq_rec_row = last_row*8 
+    def get_offset_bits(self, number_of_gates):
         if not self.is_seq_rec_configured:
-            self.conf_seqRec_size(seq_rec_row)
+            self.conf_seqRec_size(8)
             self.is_seq_rec_configured = True
-                  
-        data = self.get_seq_rec_off_data(seq_rec_row)
-        retData = []
-        
-        block3210 = np.zeros(4, dtype=np.uint32)
-        for blk in range(0, len(data), 2):
-            block3210[3] = np.uint32(
-                (
-                    (
-                        ((data[blk,0] & 0x20) << 26) | ((data[blk,0] & 0x02) << 29) |
-                        ((data[blk,1] & 0x20) << 24) | ((data[blk,1] & 0x02) << 27) |
-                        ((data[blk,2] & 0x20) << 22) | ((data[blk,2] & 0x02) << 25) |
-                        ((data[blk,3] & 0x20) << 20) | ((data[blk,3] & 0x02) << 23) |
-                        ((data[blk,4] & 0x20) << 18) | ((data[blk,4] & 0x02) << 21) |
-                        ((data[blk,5] & 0x20) << 16) | ((data[blk,5] & 0x02) << 19) |
-                        ((data[blk,6] & 0x20) << 14) | ((data[blk,6] & 0x02) << 17) | 
-                        ((data[blk,7] & 0x20) << 12) | ((data[blk,7] & 0x02) << 15)
-                    ) >> 16 
-                 )
-                      |
-                (
-                    (
-                        ((data[blk,0] & 0x10) << 11)| ((data[blk,0] & 0x01) << 14) |
-                        ((data[blk,1] & 0x10) << 9) | ((data[blk,1] & 0x01) << 12) |
-                        ((data[blk,2] & 0x10) << 7) | ((data[blk,2] & 0x01) << 10) |
-                        ((data[blk,3] & 0x10) << 5) | ((data[blk,3] & 0x01) << 8) |
-                        ((data[blk,4] & 0x10) << 3) | ((data[blk,4] & 0x01) << 6) |
-                        ((data[blk,5] & 0x10) << 1) | ((data[blk,5] & 0x01) << 4) |
-                        ((data[blk,6] & 0x10) >> 1) | ((data[blk,6] & 0x01) << 2) | 
-                        ((data[blk,7] & 0x10) >> 3) | ( data[blk,7] & 0x01)
-                    ) << 16
-                )
-            )
-            
-            block3210[2] = np.uint32(
-                (
-                    (
-                        ((data[blk,0] & 0x80) << 26) | ((data[blk,0] & 0x08) << 29) |
-                        ((data[blk,1] & 0x80) << 24) | ((data[blk,1] & 0x08) << 27) |
-                        ((data[blk,2] & 0x80) << 22) | ((data[blk,2] & 0x08) << 25) |
-                        ((data[blk,3] & 0x80) << 20) | ((data[blk,3] & 0x08) << 23) |
-                        ((data[blk,4] & 0x80) << 18) | ((data[blk,4] & 0x08) << 21) |
-                        ((data[blk,5] & 0x80) << 16) | ((data[blk,5] & 0x08) << 19) |
-                        ((data[blk,6] & 0x80) << 14) | ((data[blk,6] & 0x08) << 17) | 
-                        ((data[blk,7] & 0x80) << 12) | ((data[blk,7] & 0x08) << 15)
-                    ) >> 16 
-                 )
-                      |
-                (
-                    (
-                        ((data[blk,0] & 0x40) << 11)| ((data[blk,0] & 0x04) << 14) |
-                        ((data[blk,1] & 0x40) << 9) | ((data[blk,1] & 0x04) << 12) |
-                        ((data[blk,2] & 0x40) << 7) | ((data[blk,2] & 0x04) << 10) |
-                        ((data[blk,3] & 0x40) << 5) | ((data[blk,3] & 0x04) << 8) |
-                        ((data[blk,4] & 0x40) << 3) | ((data[blk,4] & 0x04) << 6) |
-                        ((data[blk,5] & 0x40) << 1) | ((data[blk,5] & 0x04) << 4) |
-                        ((data[blk,6] & 0x40) >> 1) | ((data[blk,6] & 0x04) << 2) | 
-                        ((data[blk,7] & 0x40) >> 3) | ( data[blk,7] & 0x04)
-                    ) << 16
-                )
-            )
-            block3210[1] = np.uint32(
-                (
-                    (
-                        ((data[blk+1,0] & 0x20) << 26) | ((data[blk+1,0] & 0x02) << 29) |
-                        ((data[blk+1,1] & 0x20) << 24) | ((data[blk+1,1] & 0x02) << 27) |
-                        ((data[blk+1,2] & 0x20) << 22) | ((data[blk+1,2] & 0x02) << 25) |
-                        ((data[blk+1,3] & 0x20) << 20) | ((data[blk+1,3] & 0x02) << 23) |
-                        ((data[blk+1,4] & 0x20) << 18) | ((data[blk+1,4] & 0x02) << 21) |
-                        ((data[blk+1,5] & 0x20) << 16) | ((data[blk+1,5] & 0x02) << 19) |
-                        ((data[blk+1,6] & 0x20) << 14) | ((data[blk+1,6] & 0x02) << 17) | 
-                        ((data[blk+1,7] & 0x20) << 12) | ((data[blk+1,7] & 0x02) << 15)
-                    ) >> 16 
-                 )
-                      |
-                (
-                    (
-                        ((data[blk+1,0] & 0x10) << 11)| ((data[blk+1,0] & 0x01) << 14) |
-                        ((data[blk+1,1] & 0x10) << 9) | ((data[blk+1,1] & 0x01) << 12) |
-                        ((data[blk+1,2] & 0x10) << 7) | ((data[blk+1,2] & 0x01) << 10) |
-                        ((data[blk+1,3] & 0x10) << 5) | ((data[blk+1,3] & 0x01) << 8) |
-                        ((data[blk+1,4] & 0x10) << 3) | ((data[blk+1,4] & 0x01) << 6) |
-                        ((data[blk+1,5] & 0x10) << 1) | ((data[blk+1,5] & 0x01) << 4) |
-                        ((data[blk+1,6] & 0x10) >> 1) | ((data[blk+1,6] & 0x01) << 2) | 
-                        ((data[blk+1,7] & 0x10) >> 3) | ( data[blk+1,7] & 0x01)
-                    ) << 16          
-                )                    
-            )                        
-                                     
-            block3210[0] = np.uint32(
-                (                    
-                    (                
-                        ((data[blk+1,0] & 0x80) << 26) | ((data[blk,0] & 0x08) << 29) |
-                        ((data[blk+1,1] & 0x80) << 24) | ((data[blk,1] & 0x08) << 27) |
-                        ((data[blk+1,2] & 0x80) << 22) | ((data[blk,2] & 0x08) << 25) |
-                        ((data[blk+1,3] & 0x80) << 20) | ((data[blk,3] & 0x08) << 23) |
-                        ((data[blk+1,4] & 0x80) << 18) | ((data[blk,4] & 0x08) << 21) |
-                        ((data[blk+1,5] & 0x80) << 16) | ((data[blk,5] & 0x08) << 19) |
-                        ((data[blk+1,6] & 0x80) << 14) | ((data[blk,6] & 0x08) << 17) | 
-                        ((data[blk+1,7] & 0x80) << 12) | ((data[blk,7] & 0x08) << 15)
-                    ) >> 16 
-                 )
-                      |
-                (
-                    (
-                        ((data[blk+1,0] & 0x40) << 11)| ((data[blk+1,0] & 0x04) << 14) |
-                        ((data[blk+1,1] & 0x40) << 9) | ((data[blk+1,1] & 0x04) << 12) |
-                        ((data[blk+1,2] & 0x40) << 7) | ((data[blk+1,2] & 0x04) << 10) |
-                        ((data[blk+1,3] & 0x40) << 5) | ((data[blk+1,3] & 0x04) << 8) |
-                        ((data[blk+1,4] & 0x40) << 3) | ((data[blk+1,4] & 0x04) << 6) |
-                        ((data[blk+1,5] & 0x40) << 1) | ((data[blk+1,5] & 0x04) << 4) |
-                        ((data[blk+1,6] & 0x40) >> 1) | ((data[blk+1,6] & 0x04) << 2) | 
-                        ((data[blk+1,7] & 0x40) >> 3) | ( data[blk+1,7] & 0x04)
-                    ) << 16
-                )
-            )
-                          
-        return block3210
+        #8 rows in FPGA memory corresponds to one gate (8bytes per row)
+        received_offset_data = self.get_seq_rec_off_data(seq_rec_row=8*number_of_gates)
+        received_offset_data_in_bits = ' '.join(format(ord(x), '#010b') for x in received_offset_data)
+        received_offset_data_in_bits = ''.join([x[2:] for x in received_offset_data_in_bits.split(" ")])
+        received_offset_data_in_bits_array = np.array([d for d in received_offset_data_in_bits]).reshape((number_of_gates, 8, 8, 4, 2))
+
+        dataAsReceivedByDHP = np.zeros((64, 4 * number_of_gates))
+        for gate in range(number_of_gates):
+            # 32 bytes per bus
+            busData = np.zeros((8, 32))
+            # (3,2,1,0), (7,6,5,4) ...
+            dataInGate = np.zeros((64, 4))
+            for time_gck_id in range(8):
+                for time_dcd_id in range(4):
+                    for bus_id in range(8):
+                        time_id = 4 * time_gck_id + time_dcd_id
+                        data_byte = ''
+                        for b in received_offset_data_in_bits_array[gate, time_gck_id, bus_id, time_dcd_id, :]:
+                            data_byte += b
+                        data_byte = int(data_byte, 2)
+                        busData[bus_id, time_id] = data_byte
+            dataAsReceivedByDHP[:, gate * 4:(gate + 1) * 4] = dataInGate
+        return dataAsReceivedByDHP
+# block3210 = np.zeros(4, dtype=np.uint32)
+# for blk in range(0, len(data), 2):
+#     block3210[3] = np.uint32(
+#         (
+#             (
+#                 ((data[blk,0] & 0x20) << 26) | ((data[blk,0] & 0x02) << 29) |
+#                 ((data[blk,1] & 0x20) << 24) | ((data[blk,1] & 0x02) << 27) |
+#                 ((data[blk,2] & 0x20) << 22) | ((data[blk,2] & 0x02) << 25) |
+#                 ((data[blk,3] & 0x20) << 20) | ((data[blk,3] & 0x02) << 23) |
+#                 ((data[blk,4] & 0x20) << 18) | ((data[blk,4] & 0x02) << 21) |
+#                 ((data[blk,5] & 0x20) << 16) | ((data[blk,5] & 0x02) << 19) |
+#                 ((data[blk,6] & 0x20) << 14) | ((data[blk,6] & 0x02) << 17) |
+#                 ((data[blk,7] & 0x20) << 12) | ((data[blk,7] & 0x02) << 15)
+#             ) >> 16
+#          )
+#               |
+#         (
+#             (
+#                 ((data[blk,0] & 0x10) << 11)| ((data[blk,0] & 0x01) << 14) |
+#                 ((data[blk,1] & 0x10) << 9) | ((data[blk,1] & 0x01) << 12) |
+#                 ((data[blk,2] & 0x10) << 7) | ((data[blk,2] & 0x01) << 10) |
+#                 ((data[blk,3] & 0x10) << 5) | ((data[blk,3] & 0x01) << 8) |
+#                 ((data[blk,4] & 0x10) << 3) | ((data[blk,4] & 0x01) << 6) |
+#                 ((data[blk,5] & 0x10) << 1) | ((data[blk,5] & 0x01) << 4) |
+#                 ((data[blk,6] & 0x10) >> 1) | ((data[blk,6] & 0x01) << 2) |
+#                 ((data[blk,7] & 0x10) >> 3) | ( data[blk,7] & 0x01)
+#             ) << 16
+#         )
+#     )
+#
+#     block3210[2] = np.uint32(
+#         (
+#             (
+#                 ((data[blk,0] & 0x80) << 26) | ((data[blk,0] & 0x08) << 29) |
+#                 ((data[blk,1] & 0x80) << 24) | ((data[blk,1] & 0x08) << 27) |
+#                 ((data[blk,2] & 0x80) << 22) | ((data[blk,2] & 0x08) << 25) |
+#                 ((data[blk,3] & 0x80) << 20) | ((data[blk,3] & 0x08) << 23) |
+#                 ((data[blk,4] & 0x80) << 18) | ((data[blk,4] & 0x08) << 21) |
+#                 ((data[blk,5] & 0x80) << 16) | ((data[blk,5] & 0x08) << 19) |
+#                 ((data[blk,6] & 0x80) << 14) | ((data[blk,6] & 0x08) << 17) |
+#                 ((data[blk,7] & 0x80) << 12) | ((data[blk,7] & 0x08) << 15)
+#             ) >> 16
+#          )
+#               |
+#         (
+#             (
+#                 ((data[blk,0] & 0x40) << 11)| ((data[blk,0] & 0x04) << 14) |
+#                 ((data[blk,1] & 0x40) << 9) | ((data[blk,1] & 0x04) << 12) |
+#                 ((data[blk,2] & 0x40) << 7) | ((data[blk,2] & 0x04) << 10) |
+#                 ((data[blk,3] & 0x40) << 5) | ((data[blk,3] & 0x04) << 8) |
+#                 ((data[blk,4] & 0x40) << 3) | ((data[blk,4] & 0x04) << 6) |
+#                 ((data[blk,5] & 0x40) << 1) | ((data[blk,5] & 0x04) << 4) |
+#                 ((data[blk,6] & 0x40) >> 1) | ((data[blk,6] & 0x04) << 2) |
+#                 ((data[blk,7] & 0x40) >> 3) | ( data[blk,7] & 0x04)
+#             ) << 16
+#         )
+#     )
+#     block3210[1] = np.uint32(
+#         (
+#             (
+#                 ((data[blk+1,0] & 0x20) << 26) | ((data[blk+1,0] & 0x02) << 29) |
+#                 ((data[blk+1,1] & 0x20) << 24) | ((data[blk+1,1] & 0x02) << 27) |
+#                 ((data[blk+1,2] & 0x20) << 22) | ((data[blk+1,2] & 0x02) << 25) |
+#                 ((data[blk+1,3] & 0x20) << 20) | ((data[blk+1,3] & 0x02) << 23) |
+#                 ((data[blk+1,4] & 0x20) << 18) | ((data[blk+1,4] & 0x02) << 21) |
+#                 ((data[blk+1,5] & 0x20) << 16) | ((data[blk+1,5] & 0x02) << 19) |
+#                 ((data[blk+1,6] & 0x20) << 14) | ((data[blk+1,6] & 0x02) << 17) |
+#                 ((data[blk+1,7] & 0x20) << 12) | ((data[blk+1,7] & 0x02) << 15)
+#             ) >> 16
+#          )
+#               |
+#         (
+#             (
+#                 ((data[blk+1,0] & 0x10) << 11)| ((data[blk+1,0] & 0x01) << 14) |
+#                 ((data[blk+1,1] & 0x10) << 9) | ((data[blk+1,1] & 0x01) << 12) |
+#                 ((data[blk+1,2] & 0x10) << 7) | ((data[blk+1,2] & 0x01) << 10) |
+#                 ((data[blk+1,3] & 0x10) << 5) | ((data[blk+1,3] & 0x01) << 8) |
+#                 ((data[blk+1,4] & 0x10) << 3) | ((data[blk+1,4] & 0x01) << 6) |
+#                 ((data[blk+1,5] & 0x10) << 1) | ((data[blk+1,5] & 0x01) << 4) |
+#                 ((data[blk+1,6] & 0x10) >> 1) | ((data[blk+1,6] & 0x01) << 2) |
+#                 ((data[blk+1,7] & 0x10) >> 3) | ( data[blk+1,7] & 0x01)
+#             ) << 16
+#         )
+#     )
+#
+#     block3210[0] = np.uint32(
+#         (
+#             (
+#                 ((data[blk+1,0] & 0x80) << 26) | ((data[blk,0] & 0x08) << 29) |
+#                 ((data[blk+1,1] & 0x80) << 24) | ((data[blk,1] & 0x08) << 27) |
+#                 ((data[blk+1,2] & 0x80) << 22) | ((data[blk,2] & 0x08) << 25) |
+#                 ((data[blk+1,3] & 0x80) << 20) | ((data[blk,3] & 0x08) << 23) |
+#                 ((data[blk+1,4] & 0x80) << 18) | ((data[blk,4] & 0x08) << 21) |
+#                 ((data[blk+1,5] & 0x80) << 16) | ((data[blk,5] & 0x08) << 19) |
+#                 ((data[blk+1,6] & 0x80) << 14) | ((data[blk,6] & 0x08) << 17) |
+#                 ((data[blk+1,7] & 0x80) << 12) | ((data[blk,7] & 0x08) << 15)
+#             ) >> 16
+#          )
+#               |
+#         (
+#             (
+#                 ((data[blk+1,0] & 0x40) << 11)| ((data[blk+1,0] & 0x04) << 14) |
+#                 ((data[blk+1,1] & 0x40) << 9) | ((data[blk+1,1] & 0x04) << 12) |
+#                 ((data[blk+1,2] & 0x40) << 7) | ((data[blk+1,2] & 0x04) << 10) |
+#                 ((data[blk+1,3] & 0x40) << 5) | ((data[blk+1,3] & 0x04) << 8) |
+#                 ((data[blk+1,4] & 0x40) << 3) | ((data[blk+1,4] & 0x04) << 6) |
+#                 ((data[blk+1,5] & 0x40) << 1) | ((data[blk+1,5] & 0x04) << 4) |
+#                 ((data[blk+1,6] & 0x40) >> 1) | ((data[blk+1,6] & 0x04) << 2) |
+#                 ((data[blk+1,7] & 0x40) >> 3) | ( data[blk+1,7] & 0x04)
+#             ) << 16
+#         )
+#     )
+#
+        #return block3210
 
     def get_offsetSequence(self, GCK_count, new_conf):
         data = self.get_offsetBits(GCK_count, new_conf)
@@ -440,36 +457,25 @@ class PROBECARD(Dut):
         return OFFSET_SIGNALS_SEQUENCE(GCK_count, [DI7_0 , DI7_1], [DI6_0 , DI6_1], [DI5_0 , DI5_1], [DI4_0 , DI4_1], 
                                        [DI3_0 , DI3_1], [DI2_0 , DI2_1], [DI1_0 , DI1_1], [DI0_0 , DI0_1])
 
-    def get_switcherBits(self, last_row):
-        '''
-        Reads switcher bytes of the DI
-        '''
-        seq_rec_row = last_row*8 
-        if not self.is_seq_rec_configured:
-            self.conf_seqRec_size(seq_rec_row)
-            self.is_seq_rec_configured = True
-                  
-        data = self.get_seq_rec_sw_data(seq_rec_row)
-        
-        #block3 clk, block2 gate, block1 clear, block0 serIn
-        block3210 = np.zeros(4, dtype=np.uint32)
-        for block_id in range(0, len(data), 8):
-            clk   = []
-            gate  = []
-            clear = []
-            serIn = []
-            for i in range(8):
-                clk.append(  (data[block_id+i  , 0] & 0xf0) >> 4)
-                gate.append(  data[block_id+i  , 0] & 0x0f)
-                clear.append((data[block_id+i  , 1]  & 0xf0) >> 4)
-                serIn.append( data[block_id+i  , 1]  & 0xf0)
-            block3210[3] = (clk[7]   << 28) | (clk[6]   << 24) | (clk[5]   << 20) | (clk[4]   << 16) | (clk[3]   << 12) | (clk[2]   << 8) | (clk[1]   << 4) | clk[0]
-            block3210[2] = (gate[7]  << 28) | (gate[6]  << 24) | (gate[5]  << 20) | (gate[4]  << 16) | (gate[3]  << 12) | (gate[2]  << 8) | (gate[1]  << 4) | gate[0]
-            block3210[1] = (clear[7] << 28) | (clear[6] << 24) | (clear[5] << 20) | (clear[4] << 16) | (clear[3] << 12) | (clear[2] << 8) | (clear[1] << 4) | clear[0]
-            block3210[0] = (serIn[7] << 28) | (serIn[6] << 24) | (serIn[5] << 20) | (serIn[4] << 16) | (serIn[3] << 12) | (serIn[2] << 8) | (serIn[1] << 4) | serIn[0]
-            
-        return block3210 
-        #return [SW_SIGNALS_4X_TIME_MULTIPLEXED(int((d[32 - 10] & 0xf0) >> 4), int(d[32 - 10] & 0x0f), int((d[32 - 9] & 0xf0) >> 4), int(d[32 - 9] & 0x0f)) for d in data]
+    def get_switcher_bits(self, number_of_gates):
+        #8 rows in FPGA memory corresponds to one gate (8bytes per row)
+        received_switcher_data = self.get_seq_rec_sw_data(seq_rec_row=8*number_of_gates)
+        received_switcher_data_in_bits = ' '.join(format(ord(x), '#010b') for x in received_switcher_data)
+        received_switcher_data_in_bits = ''.join([x[2:] for x in received_switcher_data_in_bits.split(" ")])
+        received_switcher_data_in_bits_array = np.array([d for d in received_switcher_data_in_bits]).reshape((number_of_gates, 8, 4, 4))
+
+        data_return = np.zeros((number_of_gates, 4, 32))
+        for gate in range(number_of_gates):
+            for time_gck_id in range(8):
+                for time_dcd_id in range(4):
+                    for sw_signal in range(4):
+                        time_id = 4 * time_gck_id + time_dcd_id
+                        data_byte = received_switcher_data_in_bits_array[gate, time_gck_id, sw_signal, time_dcd_id]
+                        data_byte = int(data_byte, 2)
+                        data_return[gate, sw_signal, time_id] = data_byte
+
+        return data_return
+
 
     def get_swSequence(self, GCK_count=512, new_conf=False):
         data = self.get_swBits(GCK_count, new_conf)
@@ -669,39 +675,44 @@ class PROBECARD(Dut):
         logging.info("%s\tSend data.",__name__)
         return testData
     
-    def send_random_pattern_to_dhpt(self):
+    def send_random_pattern_to_dhpt(self, number_of_gates):
+        import os
         logging.info("%s\tData send from FPGA to dhpt",__name__)
-        testData = get_dcd_random_pattern()
     
         self.conf_seqGen()
         self["SEQ_GEN"].set_size(8)
         gotSize = self["SEQ_GEN"].get_size()
-        if gotSize == seqSizeInWords:
-            logging.info("%s\tSet number of words to send to %s",__name__,gotSize)
-        else:
-            logging.error("%s\tSet number of words failed",__name__)
-            
         self.io_disable_all()
-        
-        #data = [L7_3, L7_2, L7_1, L7_0, L6_3, L6_2,...]
-        for blk in range(8):      
-            d = self.deserializer_1_2_4(testData[blk*4], testData[blk*4+1], testData[blk*4+2], testData[blk*4+3])
-            self['SEQ_GEN'].set_data(d, 4*blk)
-            #d = [testData[0, blk*4+3], testData[0, blk*4+2], testData[0, blk*4+1], testData[0, blk*4]]*8
-            #self['SEQ_GEN'].set_data(d, blk)
-            time.sleep(sleepTime)
-            rb = self['SEQ_GEN'].get_data(blk)
-            if np.array(d) != np.array(rb): 
-                logging.error("%s\tRead back not equal sent pattern! %s errors counted",__name__,err)   
-            else:
-                logging.info("%s\tCorrect read back!",__name__)
-    
-        self.io_enable_channel(channel)
-        #self.set_pulserGen_repeat()
-        #self.set_pulserR2S_repeat()
+
+        datatoupload = np.zeros(number_of_gates)
+        for gate in range(number_of_gates):
+            rnd_data = os.urandom(256)
+            dataInBits = ' '.join(format(ord(x), '#010b') for x in rnd_data)
+            dataInBits = ''.join([x[2:] for x in dataInBits.split(" ")])
+            dataInBitsArray = np.array([d for d in dataInBits]).reshape((8, 8, 4, 8))
+            #32 bytes per bus
+            busData = np.zeros((8,32))
+            #(3,2,1,0), (7,6,5,4) ...
+            dataAsReceivedByDHP = np.zeros((64, 4*number_of_gates))
+            dataInGate = np.zeros((64,4))
+            for time_gck_id in range(8):
+                for time_dcd_id in range(4):
+                    for bus_id in range(8):
+                        time_id = 4*time_gck_id+time_dcd_id
+                        data_byte = ''
+                        for b in dataInBitsArray[time_gck_id, bus_id, time_dcd_id, :]:
+                            data_byte += b
+                        data_byte = int(data_byte,2)
+                        busData[bus_id, time_id] = data_byte
+            dataAsReceivedByDHP[:,gate*4:(gate+1)*4] = dataInGate
+            datatoupload[gate] = rnd_data
+
+        self['SEQ_GEN'].set_data(datatoupload, 0)
+
+        self.io_enable_all()
         self["SEQ_GEN"].set_repeat(0)
         
         #self["PULSER_GEN"].start()
         logging.info("%s\tSend data.",__name__)
-        return testData    
+        return dataAsReceivedByDHP
     

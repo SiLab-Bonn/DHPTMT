@@ -1,206 +1,148 @@
-from epics import get_pv
-from slowcontrol import *
-from Probecard import PROBECARD
-#from dhh import mapping
-#from pyDepfetReader.file_reader import FileReader
-from misc import initiate_logger, printProgress, updatePortInYaml, plot_bias_biasd, plot_cml, plot_shmoo, readFile
-from basil.dut import Dut
+import os
+import time
+from collections import OrderedDict
 from time import sleep
-from upload_utils import upload_frame_data 
-import numpy as np
+
 import daq
 import dhp_utils
-import os
-from epics_utils import pvname
-from collections import OrderedDict
+import mapping
+import numpy as np
+import upload_utils
+from basil.dut import Dut
+from epics import get_pv, pvname
+
+from Probecard import PROBECARD
+from epics_slctr import DHPregisters
+from misc import initiate_logger, printProgress, updatePortInYaml, plot_bias_biasd, plot_cml, plot_shmoo, readFile
 
 
-
-class SlowControl(object):
-    def __init__(self, dhePrefix="PXD:H1031"):
-         self.dhptRegister = JTAG_REGS()
-         self.dhePrefix    = dhePrefix
-         
-    def turn_all_regs_on(cycles=10):
-        nested_dicts = ["dcd_rx_sdly","offset_dcd_dly","mem_errors","offset_mem_errors","seq_mem_errors"]
-        result = 0
-        start = time.time()
-        
-        excludedRegs = ["pll_out_sel", "tdo_tx_set06","tdo_tx_set12","tdo_tx_set30","tdo_sdly","IDAC_PLL_I50U","IDAC_PLL_ICP","IDAC_PLL_IVCO"]
-        excludedBlocks = ["CORE READBACK"]
-        
-        
-        for i in range(cycles):
-            logging.info("Iteration number %d of %d"%(i,cycles))
-            #Check with all ones
-            for key in self.dhptRegister.JTAG_REGISTERS:
-                if key not in excludedBlocks:
-                    logging.info("Now in BLOCK %s"%key)
-                    for pvname in self.dhptRegister.JTAG_REGISTERS[key]['pv']:
-                        pv = jtag_reg[key]['pv'][pvname]    
-                        if pvname in nested_dicts:
-                            for v in query_dict(pv):
-                                if v not in excludedRegs and v.pvSet.connected:
-                                    max_val = pow(2,v.size)-1 
-                                    v.set_value(max_val) 
-                        else:   
-                            if pvname not in excludedRegs and pv.pvSet.connected:
-                                max_val = pow(2,pv.size)-1 
-                                pv.set_value(max_val)
-                            else:
-                                pass
-          
-            self.dhptRegister.JTAG_REGISTERS['GLOBAL']['dispatch'].set_value()
-            self.dhptRegister.JTAG_REGISTERS['CORE']['dispatch'].set_value()
-            self.dhptRegister.JTAG_REGISTERS['OUT CONFIGURE']['dispatch'].set_value()
-            time.sleep(0.5) 
-            self.dhptRegister.JTAG_REGISTERS['GLOBAL']['dispatch'].get_value()
-            self.dhptRegister.JTAG_REGISTERS['CORE']['dispatch'].get_value()
-            self.dhptRegister.JTAG_REGISTERS['OUT CONFIGURE']['dispatch'].get_value()
-             
-            for key in self.dhptRegister.JTAG_REGISTERS:
-                if key not in excludedBlocks:
-                    logging.info("Now in BLOCK %s"%key)
-                    for pvname in self.dhptRegister.JTAG_REGISTERS[key]['pv']:
-                        pv = self.dhptRegister.JTAG_REGISTERS[key]['pv'][pvname]
-                        if pvname in nested_dicts:
-                            for v in query_dict(pv):
-                                if v not in excludedRegs and v.pvSet.connected:
-                                    max_val = pow(2,v.size)-1 
-                                    result = result + abs(max_val - v.pvGet.get()) 
-                        else:   
-                            if pvname not in excludedRegs and pv.pvSet.connected:
-                                max_val = pow(2,pv.size)-1 
-                                result = result + abs(max_val - pv.pvGet.get())
-                                #logger.info("Set max value %d"%max_val)
-                            else:
-                                pass         
-                                    
-            #Chech with all zeros
-            for key in self.dhptRegister.JTAG_REGISTERS:
-                if key not in excludedBlocks:
-                    logging.info("Now in dict %s"%key)
-                    for pvname in self.dhptRegister.JTAG_REGISTERS[key]['pv']:
-                        pv = self.dhptRegister.JTAG_REGISTERS[key]['pv'][pvname]
-                        if pvname in nested_dicts:
-                            for v in query_dict(pv):
-                                if v not in excludedRegs and v.pvSet.connected:
-                                    v.set_value(0) 
-                        else:   
-                            if pvname not in excludedRegs and pv.pvSet.connected:
-                                pv.set_value(0)
-                            else:
-                                pass
-          
-            self.dhptRegister.JTAG_REGISTERS['GLOBAL']['dispatch'].set_value()
-            self.dhptRegister.JTAG_REGISTERS['CORE']['dispatch'].set_value()
-            self.dhptRegister.JTAG_REGISTERS['OUT CONFIGURE']['dispatch'].set_value()
-            time.sleep(0.5) 
-            self.dhptRegister.JTAG_REGISTERS['GLOBAL']['dispatch'].get_value()
-            self.dhptRegister.JTAG_REGISTERS['CORE']['dispatch'].get_value()
-            self.dhptRegister.JTAG_REGISTERS['OUT CONFIGURE']['dispatch'].get_value()
-       
-            for key in self.dhptRegister.JTAG_REGISTERS:
-                if key not in excludedBlocks:
-                    logging.info("Now in dict %s"%key)
-                    for pvname in self.dhptRegister.JTAG_REGISTERS[key]['pv']:
-                        pv = self.dhptRegister.JTAG_REGISTERS[key]['pv'][pvname]
-                        if pvname in nested_dicts:
-                            for v in query_dict(pv):
-                                if v not in excludedRegs and v.pvGet.connected:
-                                    logging.info("Checking pv %s"%pvname)
-                                    result = result + v.pvGet.get()
-                                    #logger.info("Set max value %d"%max_val)
-                        else:   
-                            if pvname not in excludedRegs and pv.pvGet.connected:
-                                logging.info("Checking pv %s"%pvname)
-                                max_val = pow(2,pv.size)-1 
-                                result = result + pv.pvGet.get()
-                                #logger.info("Set max value %d"%max_val)
-                            else:
-                                pass                             
-        stop =time.time()                    
-        return result, stop-start
-         
-         
-         
-         
-    def read_dhpt_data_via_hs(self, filename, numberOfFrames = 100, lastRow = 256, firstRow = 0):
-        from dhh import daq
-        self.dhptRegister.JTAG_REGISTERS["CORE"]["pv"]["last_row"].set_value(lastRow)
-        self.dhptRegister.JTAG_REGISTERS["CORE"]["dispatch"].set_value()
-        daq.record_memorydump(1, numberOfFrames, self.dhePrefix, filename)
-    
-    def read_dhpt_data_via_jtag(self, filename, numberOfFiles = 5, lastRow = 256, firstRow = 0):
-        from jtagmemoryreader import JTagRawReader
-        reader = JTagRawReader(dhpPrefix, last_row, numberOfFiles) 
-        reader.readMemory()
-        frames = reader.getCurrentFrames()
-        np.save(filename, frames)
-        
-    def ped_error():
-        self.dhptRegister.JTAG_REGISTERS["CORE READBACK"]["dispatch"].get_value()
-        memErrs = [self.dhptRegister.JTAG_REGISTERS["CORE READBACK"]["pv"]["mem_errors"]["NUM_%s"%k].get_value() for k in range(32)]
-        doubleErrs = []
-        singleErrs = []
-        
-        for k in range(len(memErrs)):
-            singleErrs.append([k,memErrs[k] & 0x1f])         #5 bit for single bit errors
-            doubleErrs.append([k,(memErrs[k] & 0xe0) >> 5])  #3 bit for double bit errors
-    
-        return singleErrs, doubleErrs
-
-    def offset_error():
-        self.dhptRegister.JTAG_REGISTERS["CORE READBACK"]["reg"].pvGet.get()
-        memErrs = [self.dhptRegister.JTAG_REGISTERS["CORE READBACK"]["pv"]["offset_mem_errors"]["NUM_%s"%k].pvGet.get() for k in range(4)]
-        doubleErrs = []
-        singleErrs = []
-        
-        for k in range(len(memErrs)):
-            singleErrs.append([k,memErrs[k] & 0x1f])         #5 bit for single bit errors
-            doubleErrs.append([k,(memErrs[k] & 0xe0) >> 5])  #3 bit for double bit errors
-    
-        return singleErrs, doubleErrs
-    
-    def sw_seq_error():
-        memErrs = [self.dhptRegister.JTAG_REGISTERS["CORE READBACK"]["reg"]["seq_mem_errors"]["NUM_%s"%k].read() for k in range(2)]
-        doubleErrs = []
-        singleErrs = []
-        
-        for k in range(len(memErrs)):
-            singleErrs.append([k,memErrs[k] & 0x1f])         #5 bit for single bit errors
-            doubleErrs.append([k,(memErrs[k] & 0xe0) >> 5])  #3 bit for double bit errors
-    
-        return singleErrs, doubleErrs
-
-    def fill_switcher_memory(self, data, start_addr):
-        mem_reg["SWITCHER"]["pv"]["addr"].set_value(start_addr)
-        time.sleep(0.05)    
-        for addr_id in range(data.shape[1]):
-            time.sleep(0.05)
-            mem_reg["SWITCHER"]["pv"]["mem0"].set_value(data[0, start_addr])
-            mem_reg["SWITCHER"]["pv"]["mem1"].set_value(data[1, start_addr])
-            mem_reg["SWITCHER"]["pv"]["mem2"].set_value(data[2, start_addr])
-            mem_reg["SWITCHER"]["pv"]["mem3"].set_value(data[3, start_addr])
-            time.sleep(0.05)
-            mem_reg["SWITCHER"]["dispatch"].set_value()
-            
-    def fill_offset_memory(self, data):
-        mem_reg["SWITCHER"]["pv"]["addr"].set_value()
-        time.sleep(0.05)    
-        for addr_id in range(data.shape[1]):
-            time.sleep(0.05)
-            mem_reg["SWITCHER"]["pv"]["mem0"].set_value(data[0, start_addr])
-            mem_reg["SWITCHER"]["pv"]["mem1"].set_value(data[1, start_addr])
-            mem_reg["SWITCHER"]["pv"]["mem2"].set_value(data[2, start_addr])
-            mem_reg["SWITCHER"]["pv"]["mem3"].set_value(data[3, start_addr])
-            time.sleep(0.05)
-            mem_reg["SWITCHER"]["dispatch"].set_value()
-
+# class SlowControl(object):
+#     def __init__(self, dhePrefix="PXD:H1031"):
+#          self.dhp = DHPregisters()
+#
+#     def turn_all_regs_on(self):
+#         start = time.time()
+#         #Check with all ones
+#         for key in self.dhp.regs.iteritems():
+#             if ":S" in key:
+#                 if key in ["tdo_tx_set_06:S","tdo_tx_set_12:S","tdo_tx_set_30:S","dcd_invert_TRST_polarity:S","dcd_invert_TCK_polarity:S"]:
+#                     pass
+#                 else:
+#                     self.dhp.regs[key] = 1
+#             else:
+#                 if key in ["pll_des_clk_sel:VALUE","IDAC_LVDS_RX_IREF:VALUE","IDAC_LVDS_TX_IREF:VALUE","IDAC_PLL_I50U:VALUE","IDAC_PLL_ICP:VALUE", \
+#                            "IDAC_PLL_IVCO:VALUE", "IREF_TRIMMING:VALUE"]:
+#                     pass
+#                 else:
+#                     self.dhp.regs[key] = 2**16
+#
+#         self.dhp.write_core()
+#         self.dhp.write_global()
+#         stop =time.time()
+#         return stop-start
+#
+#     def turn_all_regs_off(self):
+#         start = time.time()
+#         # Check with all ones
+#         for key in self.dhp.regs.iteritems():
+#             if ":S" in key:
+#                 if key in ["tdo_tx_set_06:S", "tdo_tx_set_12:S", "tdo_tx_set_30:S", "dcd_invert_TRST_polarity:S",
+#                            "dcd_invert_TCK_polarity:S"]:
+#                     pass
+#                 else:
+#                     self.dhp.regs[key] = 0
+#             else:
+#                 if key in ["pll_des_clk_sel:VALUE", "IDAC_LVDS_RX_IREF:VALUE", "IDAC_LVDS_TX_IREF:VALUE",
+#                            "IDAC_PLL_I50U:VALUE", "IDAC_PLL_ICP:VALUE", \
+#                            "IDAC_PLL_IVCO:VALUE", "IREF_TRIMMING:VALUE"]:
+#                     pass
+#                 else:
+#                     self.dhp.regs[key] = 0
+#
+#         self.dhp.write_core()
+#         self.dhp.write_global()
+#         stop = time.time()
+#         return stop - start
+#
+#
+#
+#
+#     def read_dhpt_data_via_hs(self, filename, numberOfFrames = 100, lastRow = 256, firstRow = 0):
+#         from dhh import daq
+#         self.dhptRegister.JTAG_REGISTERS["CORE"]["pv"]["last_row"].set_value(lastRow)
+#         self.dhptRegister.JTAG_REGISTERS["CORE"]["dispatch"].set_value()
+#         daq.record_memorydump(1, numberOfFrames, self.dhePrefix, filename)
+#
+#     def read_dhpt_data_via_jtag(self, filename, numberOfFiles = 5, lastRow = 256, firstRow = 0):
+#         from jtagmemoryreader import JTagRawReader
+#         reader = JTagRawReader(dhpPrefix, last_row, numberOfFiles)
+#         reader.readMemory()
+#         frames = reader.getCurrentFrames()
+#         np.save(filename, frames)
+#
+#     def ped_error():
+#         self.dhptRegister.JTAG_REGISTERS["CORE READBACK"]["dispatch"].get_value()
+#         memErrs = [self.dhptRegister.JTAG_REGISTERS["CORE READBACK"]["pv"]["mem_errors"]["NUM_%s"%k].get_value() for k in range(32)]
+#         doubleErrs = []
+#         singleErrs = []
+#
+#         for k in range(len(memErrs)):
+#             singleErrs.append([k,memErrs[k] & 0x1f])         #5 bit for single bit errors
+#             doubleErrs.append([k,(memErrs[k] & 0xe0) >> 5])  #3 bit for double bit errors
+#
+#         return singleErrs, doubleErrs
+#
+#     def offset_error():
+#         self.dhptRegister.JTAG_REGISTERS["CORE READBACK"]["reg"].pvGet.get()
+#         memErrs = [self.dhptRegister.JTAG_REGISTERS["CORE READBACK"]["pv"]["offset_mem_errors"]["NUM_%s"%k].pvGet.get() for k in range(4)]
+#         doubleErrs = []
+#         singleErrs = []
+#
+#         for k in range(len(memErrs)):
+#             singleErrs.append([k,memErrs[k] & 0x1f])         #5 bit for single bit errors
+#             doubleErrs.append([k,(memErrs[k] & 0xe0) >> 5])  #3 bit for double bit errors
+#
+#         return singleErrs, doubleErrs
+#
+#     def sw_seq_error():
+#         memErrs = [self.dhptRegister.JTAG_REGISTERS["CORE READBACK"]["reg"]["seq_mem_errors"]["NUM_%s"%k].read() for k in range(2)]
+#         doubleErrs = []
+#         singleErrs = []
+#
+#         for k in range(len(memErrs)):
+#             singleErrs.append([k,memErrs[k] & 0x1f])         #5 bit for single bit errors
+#             doubleErrs.append([k,(memErrs[k] & 0xe0) >> 5])  #3 bit for double bit errors
+#
+#         return singleErrs, doubleErrs
+#
+#     def fill_switcher_memory(self, data, start_addr):
+#         mem_reg["SWITCHER"]["pv"]["addr"].set_value(start_addr)
+#         time.sleep(0.05)
+#         for addr_id in range(data.shape[1]):
+#             time.sleep(0.05)
+#             mem_reg["SWITCHER"]["pv"]["mem0"].set_value(data[0, start_addr])
+#             mem_reg["SWITCHER"]["pv"]["mem1"].set_value(data[1, start_addr])
+#             mem_reg["SWITCHER"]["pv"]["mem2"].set_value(data[2, start_addr])
+#             mem_reg["SWITCHER"]["pv"]["mem3"].set_value(data[3, start_addr])
+#             time.sleep(0.05)
+#             mem_reg["SWITCHER"]["dispatch"].set_value()
+#
+#     def fill_offset_memory(self, data):
+#         mem_reg["SWITCHER"]["pv"]["addr"].set_value()
+#         time.sleep(0.05)
+#         for addr_id in range(data.shape[1]):
+#             time.sleep(0.05)
+#             mem_reg["SWITCHER"]["pv"]["mem0"].set_value(data[0, start_addr])
+#             mem_reg["SWITCHER"]["pv"]["mem1"].set_value(data[1, start_addr])
+#             mem_reg["SWITCHER"]["pv"]["mem2"].set_value(data[2, start_addr])
+#             mem_reg["SWITCHER"]["pv"]["mem3"].set_value(data[3, start_addr])
+#             time.sleep(0.05)
+#             mem_reg["SWITCHER"]["dispatch"].set_value()
 
 class DHPTMP(PROBECARD):
-    def __init__(self, config, logFileDir, softwareVersion, dhptVersion):
+    def __init__(self, config, logFileDir, softwareVersion, dhptVersion, dhe):
         self.fileDir    = logFileDir
+        self.dhePrefix  = dhe
         self.psu1       = Dut("dut1_ttiql335tp_pyserial.yaml")
         self.psu2       = Dut("dut2_ttiql335tp_pyserial.yaml")
 
@@ -211,14 +153,113 @@ class DHPTMP(PROBECARD):
         self.parasiticResistanceDHE = 0.1 #Needle and bumb connection compensation
         
         
-        self.sc         = SlowControl()
+        self.dhp         = DHPregisters()
   
         initiate_logger(logFileDir, softwareVersion, dhptVersion)
         self.psu2.init()
         sleep(0.5)
         self.psu1.init()
         updatePortInYaml(config)
-        PROBECARD.__init__(self, config)  
+        PROBECARD.__init__(self, config)
+
+    def test_jtag_n1(self):
+        start = time.time()
+        jtag_ok = True
+        #Check with all ones
+        for key in self.dhp.regs.iteritems():
+            if ":S" in key:
+                if key in ["tdo_tx_set_06:S","tdo_tx_set_12:S","tdo_tx_set_30:S","dcd_invert_TRST_polarity:S","dcd_invert_TCK_polarity:S"]:
+                    pass
+                else:
+                    self.dhp.regs[key] = 1
+            else:
+                if key in ["pll_des_clk_sel:VALUE","IDAC_LVDS_RX_IREF:VALUE","IDAC_LVDS_TX_IREF:VALUE","IDAC_PLL_I50U:VALUE","IDAC_PLL_ICP:VALUE", \
+                           "IDAC_PLL_IVCO:VALUE", "IREF_TRIMMING:VALUE"]:
+                    pass
+                else:
+                    self.dhp.regs[key] = 2**16
+
+        self.dhp.write_core()
+        self.dhp.write_global()
+        time.sleep(0.5)
+        self.dhp.read_core()
+        self.dhp.read_global()
+        time.sleep(0.5)
+
+        for key in self.dhp.regs.iteritems():
+            if ":S" in key:
+                if key in ["tdo_tx_set_06:S","tdo_tx_set_12:S","tdo_tx_set_30:S","dcd_invert_TRST_polarity:S","dcd_invert_TCK_polarity:S"]:
+                    pass
+                else:
+                    if self.dhp.regs[key] != 1:
+                        jtag_ok = False
+            else:
+                if key in ["pll_des_clk_sel:VALUE","IDAC_LVDS_RX_IREF:VALUE","IDAC_LVDS_TX_IREF:VALUE","IDAC_PLL_I50U:VALUE","IDAC_PLL_ICP:VALUE", \
+                           "IDAC_PLL_IVCO:VALUE", "IREF_TRIMMING:VALUE"]:
+                    pass
+                else:
+                    if "0" in bin(self.dhp.regs[key])[1:]:
+                        jtag_ok = False
+
+        stop = time.time()
+
+        if jtag_ok:
+            cmd = "JTAG - test #1 passed after %d sec" % (stop - start)
+            return True, cmd
+        else:
+            cmd = "ERROR: JTAG - test #1 failed after %d sec" % (stop - start)
+            return False, cmd
+
+    def test_jtag_n2(self):
+        start = time.time()
+        jtag_ok = True
+        # Check with all ones
+        for key in self.dhp.regs.iteritems():
+            if ":S" in key:
+                if key in ["tdo_tx_set_06:S", "tdo_tx_set_12:S", "tdo_tx_set_30:S", "dcd_invert_TRST_polarity:S",
+                           "dcd_invert_TCK_polarity:S"]:
+                    pass
+                else:
+                    self.dhp.regs[key] = 0
+            else:
+                if key in ["pll_des_clk_sel:VALUE", "IDAC_LVDS_RX_IREF:VALUE", "IDAC_LVDS_TX_IREF:VALUE",
+                           "IDAC_PLL_I50U:VALUE", "IDAC_PLL_ICP:VALUE", \
+                           "IDAC_PLL_IVCO:VALUE", "IREF_TRIMMING:VALUE"]:
+                    pass
+                else:
+                    self.dhp.regs[key] = 0
+
+        self.dhp.write_core()
+        self.dhp.write_global()
+        self.dhp.write_core()
+        self.dhp.write_global()
+        time.sleep(0.5)
+        self.dhp.read_core()
+        self.dhp.read_global()
+        time.sleep(0.5)
+
+        for key in self.dhp.regs.iteritems():
+            if ":S" in key:
+                if key in ["tdo_tx_set_06:S","tdo_tx_set_12:S","tdo_tx_set_30:S","dcd_invert_TRST_polarity:S","dcd_invert_TCK_polarity:S"]:
+                    pass
+                else:
+                    if self.dhp.regs[key] != 0:
+                        jtag_ok = False
+            else:
+                if key in ["pll_des_clk_sel:VALUE","IDAC_LVDS_RX_IREF:VALUE","IDAC_LVDS_TX_IREF:VALUE","IDAC_PLL_I50U:VALUE","IDAC_PLL_ICP:VALUE", \
+                           "IDAC_PLL_IVCO:VALUE", "IREF_TRIMMING:VALUE"]:
+                    pass
+                else:
+                    if "1" in bin(self.dhp.regs[key])[1:]:
+                        jtag_ok = False
+        stop = time.time()
+
+        if jtag_ok:
+            cmd = "JTAG - test #2 passed after %d sec" % (stop - start)
+            return True, cmd
+        else:
+            cmd = "ERROR: JTAG - test #2 failed after %d sec" % (stop - start)
+            return False, cmd
     
     def shut_down_system(self):
         self.io_disable_all()
@@ -441,18 +482,80 @@ class DHPTMP(PROBECARD):
             return False
             
     def test_jtag(self):
-        crst = get_pv(self.sc.dhePrefix+":dhpt_crst:S:set")
-        reinJTAG = get_pv(self.sc.dhePrefix+":jtag_reinit_chain:S:set")
-        if not get_pv(self.sc.dhePrefix+":jtag_chain_initialized:S:cur").get():
+        crst = get_pv(self.dhePrefix+":dhpt_crst:S:set")
+        reinJTAG = get_pv(self.dhePrefix+":jtag_reinit_chain:S:set")
+        if not get_pv(self.dhePrefix+":jtag_chain_initialized:S:cur").get():
             crst.put(0)
             crst.put(1)
             logging.info("%s\tCRESETB; Reset JTAG registers in DHPT", __name__)
             reinJTAG.put(1)
             logging.info("%s\tReinitalized JTAG chain",__name__)
-        
-        self.sc.turn_all_regs_on()
-        return True
-    
+
+        return self.turn_all_regs_on() and self.turn_all_regs_off()
+
+
+
+    def test_pedestal_memory(self):
+        number_of_gates=1024
+        start = time.time()
+        pedestals = np.random.randint(low=0, high=255, size=number_of_gates*256).reshape(
+            (4 * number_of_gates,64))
+        upload_utils.upload_frame_data(dheprefix=self.dhePrefix, asicpair=1, dataFrame=pedestals, address_offset=0, verbose=True)
+
+        #TODO: READ AND CHECK
+        mem_ped = True
+        stop = time.time()
+
+        if mem_ped:
+            cmd = "I/O - pedestal memory test passed after %d sec" % (stop - start)
+            return True, cmd
+        else:
+            cmd = "ERROR: I/O - pedestal memory test failed after %d sec" % (stop - start)
+            return False, cmd
+
+
+    def test_offset_memory(self):
+        number_of_gates=256
+        start = time.time()
+        offset_frame = np.random.randint(low=0, high=3, size=64 * 4 * number_of_gates).reshape(
+            (64, 4 * number_of_gates))
+        offset_lin = mapping.matrixToOffsetUpload(data_in=offset_frame, memIndex=0, shift=0)
+        upload_utils.upload_offsets(data=offset_lin, index=1, start_address=0, asic="DHPT", dheprefix=self.dhePrefix)
+        # TODO: READ AND CHECK
+        mem_off = True
+        stop = time.time()
+
+        if mem_off:
+            cmd = "I/O - offset memory test passed after %d sec" % (stop - start)
+            return True, cmd
+        else:
+            cmd = "ERROR: I/O - offset memory test failed after %d sec" % (stop - start)
+            return False, cmd
+
+    def test_switcher_memory(self):
+        number_of_gates=256
+        start = time.time()
+        switcher_normal_data = np.random.randint(low=0, high=1, size=32 * 4 * number_of_gates).reshape(
+            (number_of_gates, 4, 32))
+        switcher_gated_data = np.random.randint(low=0, high=1, size=32 * 4 * number_of_gates).reshape(
+            (number_of_gates, 4, 32))
+        upload_utils.upload_switcher_sequence(dheprefix=self.dhePrefix, asicpair=1, data=switcher_normal_data,
+                                              sequence="main")
+        upload_utils.upload_switcher_sequence(dheprefix=self.dhePrefix, asicpair=1, data=switcher_gated_data,
+                                              sequence="gated")
+
+        # TODO: READ AND CHECK
+        mem_sw = True
+        stop = time.time()
+
+        if mem_sw:
+            cmd = "I/O - switcher memory test passed after %d sec" % (stop - start)
+            return True, cmd
+        else:
+            cmd = "ERROR: I/O - switcher memory test failed after %d sec" % (stop - start)
+            return False, cmd
+
+
     def test_memories(self):
         isPedestalMemoryOK = False
         isOffsetMemoryOK   = False
@@ -490,30 +593,30 @@ class DHPTMP(PROBECARD):
             if isErr:
                 logging.fatal("Bit error detected: in mem block %s", derr[0]) 
             
-            for pat in pattern: 
-                self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem0"].set_value(pat)
-                self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem1"].set_value(pat)
-                self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem2"].set_value(pat)
-                self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem3"].set_value(pat)
+            for pat in pattern:
+                get_pv(self.dhePrefix, "D1:memdata0:VALUE").put(pat)
+                get_pv(self.dhePrefix, "D1:memdata1:VALUE").put(pat)
+                get_pv(self.dhePrefix, "D1:memdata2:VALUE").put(pat)
+                get_pv(self.dhePrefix, "D1:memdata3:VALUE").put(pat)
                 for blk in range(16):
                     #logging.info("MEM; use pattern %x"%pat)
                     #logging.info("Pattern %x"%pat)
-                    self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["addr"].set_value(blk << 10)
+                    get_pv(self.dhePrefix, "D1:memaddr:VALUE").put(blk << 10)
                     time.sleep(0.05)
                     for addr_id in range(1024):
-                        self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["dispatch"].set_value()
+                        get_pv(self.dhePrefix, "D1:memdata:trg:set").put(1)
                         time.sleep(0.05)
                         
                 for blk in range(16):
-                    self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["addr"].set_value(blk << 10)
+                    get_pv(self.dhePrefix, "D1:memaddr:VALUE").put(blk << 10)
                     time.sleep(0.05)
-                    for addr_id in range(1024): 
-                        self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["dispatch"].set_value() 
+                    for addr_id in range(1024):
+                        get_pv(self.dhePrefix, "D1:memdata_dispatch:trg:cur").put(1)
                         time.sleep(0.1)
-                        mem0 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem0"].get_value())
-                        mem1 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem1"].get_value())
-                        mem2 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem2"].get_value())
-                        mem3 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["PEDESTAL"]["pv"]["mem3"].get_value())
+                        mem0 = np.uint32(get_pv(self.dhePrefix, "D1:memdata0:VALUE").get())
+                        mem1 = np.uint32(get_pv(self.dhePrefix, "D1:memdata1:VALUE").get())
+                        mem2 = np.uint32(get_pv(self.dhePrefix, "D1:memdata2:VALUE").get())
+                        mem3 = np.uint32(get_pv(self.dhePrefix, "D1:memdata3:VALUE").get())
                         time.sleep(0.05)
                         #logging.info(patternErr)
                         if ((mem0 != pat) or (mem1 != pat) or (mem2 != pat) or (mem3 != pat)):
@@ -561,28 +664,28 @@ class DHPTMP(PROBECARD):
             if isErr:
                 logging.fatal("Bit error detected: in mem block %s", derr[0]) 
             
-            for pat in pattern: 
-                self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem0"].set_value(pat)
-                self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem1"].set_value(pat)
-                self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem2"].set_value(pat)
-                self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem3"].set_value(pat)
+            for pat in pattern:
+                get_pv(self.dhePrefix, "D1:memoffsetdata0:VALUE").put(pat)
+                get_pv(self.dhePrefix, "D1:memoffsetdata1:VALUE").put(pat)
+                get_pv(self.dhePrefix, "D1:memoffsetdata2:VALUE").put(pat)
+                get_pv(self.dhePrefix, "D1:memoffsetdata3:VALUE").put(pat)
                 #logging.info("MEM; use pattern %x"%pat)
                 #logging.info("Pattern %x"%pat)
-                self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["addr"].set_value()
+                get_pv(self.dhePrefix, "D1:memoffsetaddr:VALUE").put(0)
                 time.sleep(0.05)
                 for addr_id in range(1024):
-                    self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["dispatch"].set_value()
+                    get_pv(self.dhePrefix, "D1:memoffsetdata:trg:set").put(1)
                     time.sleep(0.05)
-                    
-                self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["addr"].set_value()
+
+                get_pv(self.dhePrefix, "D1:memoffsetaddr:VALUE").put(0)
                 time.sleep(0.05)
-                for addr_id in range(1024): 
-                    self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["dispatch"].set_value() 
+                for addr_id in range(1024):
+                    get_pv(self.dhePrefix, "D1:memoffsetdata_dispatch:trg:cur").put(1)
                     time.sleep(0.1)
-                    mem0 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem0"].get_value())
-                    mem1 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem1"].get_value())
-                    mem2 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem2"].get_value())
-                    mem3 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["OFFSET"]["pv"]["mem3"].get_value())
+                    mem0 = np.uint32(get_pv(self.dhePrefix, "D1:memoffsetdata0:VALUE").get())
+                    mem1 = np.uint32(get_pv(self.dhePrefix, "D1:memoffsetdata1:VALUE").get())
+                    mem2 = np.uint32(get_pv(self.dhePrefix, "D1:memoffsetdata2:VALUE").get())
+                    mem3 = np.uint32(get_pv(self.dhePrefix, "D1:memoffsetdata3:VALUE").get())
                     time.sleep(0.05)
                     #logging.info(patternErr)
                     if ((mem0 != pat) or (mem1 != pat) or (mem2 != pat) or (mem3 != pat)):
@@ -631,30 +734,30 @@ class DHPTMP(PROBECARD):
             if isErr:
                 logging.fatal("Bit error detected: in mem block %s", derr[0]) 
             
-            for pat in pattern: 
-                self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem0"].set_value(pat)
-                self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem1"].set_value(pat)
-                self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem2"].set_value(pat)
-                self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem3"].set_value(pat)
+            for pat in pattern:
+                get_pv(self.dhePrefix, "D1:memswdata0:VALUE").put(pat)
+                get_pv(self.dhePrefix, "D1:memswdata1:VALUE").put(pat)
+                get_pv(self.dhePrefix, "D1:memswdata2:VALUE").put(pat)
+                get_pv(self.dhePrefix, "D1:memswdata3:VALUE").put(pat)
                 for blk in range(16):
                     #logging.info("MEM; use pattern %x"%pat)
                     #logging.info("Pattern %x"%pat)
-                    self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["addr"].set_value()
+                    get_pv(self.dhePrefix, "D1:memswaddr:VALUE").put(0)
                     time.sleep(0.05)
                     for addr_id in range(1024):
-                        self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["dispatch"].set_value()
+                        get_pv(self.dhePrefix, "D1:memswdata:trg:set").put(1)
                         time.sleep(0.05)
                         
                 for blk in range(16):
-                    self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["addr"].set_value()
+                    get_pv(self.dhePrefix, "D1:memswaddr:VALUE").put(0)
                     time.sleep(0.05)
-                    for addr_id in range(1024): 
-                        self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["dispatch"].set_value() 
+                    for addr_id in range(1024):
+                        get_pv(self.dhePrefix, "D1:memswdata_dispatch:trg:cur").put(1)
                         time.sleep(0.1)
-                        mem0 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem0"].get_value())
-                        mem1 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem1"].get_value())
-                        mem2 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem2"].get_value())
-                        mem3 = np.uint32(self.sc.dhptRegister.MEMORY_REGISTERS["SWITCHER"]["pv"]["mem3"].get_value())
+                        mem0 = np.uint32(get_pv(self.dhePrefix, "D1:memswdata0:VALUE").get())
+                        mem1 = np.uint32(get_pv(self.dhePrefix, "D1:memswdata1:VALUE").get())
+                        mem2 = np.uint32(get_pv(self.dhePrefix, "D1:memswdata2:VALUE").get())
+                        mem3 = np.uint32(get_pv(self.dhePrefix, "D1:memswdata3:VALUE").get())
                         time.sleep(0.05)
                         #logging.info(patternErr)
                         if ((mem0 != pat) or (mem1 != pat) or (mem2 != pat) or (mem3 != pat)):
@@ -672,201 +775,273 @@ class DHPTMP(PROBECARD):
                 
                 
         return isPedestalMemoryOK and isOffsetMemoryOK and isSwitcherMemoryOK 
-    
-    #===========================================================================
-    # def test_io_streams(self):
-    #     isDelayOK    = False
-    #     isDCDOK      = False
-    #     isOffsetOK   = False
-    #     isSwitcherOK = False
-    #      
-    #     '''
-    #     Test DCD Delay scan
-    #     '''
-    #     logging.info("I/O; DCD-DHPT Delay Test ")
-    #     start = time.time()
-    #     PROBECARD.send_testpattern_to_dhpt()
-    #     os.system("/home/lgermic/.cs-studio/analysis/delays/scan_delays.py")
-    #     os.system("/home/lgermic/.cs-studio/analysis/delays/analyze_delays.py")
-    #     os.system("/home/lgermic/.cs-studio/analysis/delays/find_optimal_delays.py")
-    #     '''
-    #     TODO: find_optimal_delays returns if optimal delays are found and optimal delays
-    #     '''
-    #     optDelays = True
-    #     stop = time.time()
-    #     
-    #     if optDelays:
-    #         logging.info("I/O; DCD-DHPT Delay Test passed after %d sec"%(stop-start))
-    #         isDelayOK = True
-    #     else:
-    #         logging.warning("I/O; DCD-DHPT Delay Test failed. No set of delays found.")
-    # 
-    #     '''
-    #     Test DCD Data 
-    #     '''
-    #     logging.info("I/O; DCD-DHPT Data Test ")
-    #     start = time.time()
-    #     testpattern = PROBECARD.send_random_pattern_to_dhpt()
-    #     filename = self.fileDir+"data"
-    #     self.sc.read_dhpt_data_via_hs(filename)
-    #     
-    #     read = FileReader(-1,1)
-    #     read.set_debug_output(False)
-    #     if read.open(filename):
-    #         print "File not found: ",filename
-    #         sys.exit(-1)
-    #     data, isRaw, isGood = read.readEvent()
-    #     nr_of_frames = 0
-    #     wrongbits = 0
-    #     while isGood:
-    #         nr_of_frames += 1
-    #         dataNew = mapping.matrixToDcd(data[:,:,nr_of_frames-1])
-    #         wrongbits += plots.calculate_wrong_bits(dataNew, testpattern)
-    #         data, isRaw, isGood = read.readEvent()
-    #     
-    #     isDCDOK = (wrongbits == 0) 
-    #     stop = time.time()
-    #     
-    #     if dcdData:
-    #         logging.info("I/O; DCD-DHPT Delay Test passed after %d sec"%(stop-start))
-    #         isDCDOK = True
-    #     else:
-    #         logging.warning("I/O; DCD-DHPT Delay Test failed. No set of delays found.")
-    #     
-    #     '''
-    #     Test Offset Data 
-    #     '''
-    #     isOffsetOK = True
-    #     logging.info("I/O; OFFSET Data Test ")
-    #     start = time.time()
-    #     data = np.zeros((4,4,512), dtype=np.uint32)
-    #     data[0,:,:] = np.array(4*[512*[0xAAAAAAAA]], dtype=np.uint32)    
-    #     data[1,:,:] = np.array(4*[512*[0x55555555]], dtype=np.uint32)    
-    #     data[2,:,:] = np.random.randint(0,np.power(2,32),(4,512))
-    #     data[3,:,:] = np.random.randint(0,np.power(2,32),(4,512))
-    #     
-    #     self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["pv"]["last_row"].set_value(255)
-    #     self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["dispatch"].set_value()    
-    # 
-    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["offset_en_out"].set_value(1)
-    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
-    # 
-    #     for pattern_id in range(4):
-    #         self.sc.fill_offset_memory(data[pattern_id])
-    #         dataRet = PROBECARD.get_offsetBits()
-    #         
-    #         wrong_data_row_id = []
-    #         if data[i].shape == dataRet.shape:
-    #             for row in range(data.shape[1]):
-    #                 if (data[id,:,row] != dataRet[:,row]): 
-    #                     wrong_data_row_id.append(row) 
-    #         
-    #         logging.info("Wrong data in row:\n " + ", ".join(str(x) for x in wrong_data_row_id))
-    #         logging.info("Received pattern %x %x %x %x vs Expected pattern %x %x %x %x"%(dataRet[0,row], dataRet[1,row], dataRet[2,row], dataRet[3,row], data[pattern_id,0,row], data[i,1,row], data[pattern_id,2,row], data[pattern_id,3,row]))
-    #         isOffsetOK = isOffsetOK & (len(wrong_data_row_id) == 0)           
-    #     stop = time.time()
-    #     
-    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["offset_en_out"].set_value()
-    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
-    #     if isOffsetOK:
-    #         logging.info("I/O; Offset Test passed after %d sec"%(stop-start))
-    #     else:
-    #         logging.warning("I/O; Offset Test failed.")
-    #     
-    #     '''
-    #     Test Switcher Data 
-    #     '''
-    #     isSwitcherOK = True
-    #     logging.info("I/O; Switcher Data Test ")
-    #     start = time.time()
-    #     data = np.zeros((4,4,1024), dtype=np.uint32)
-    #     data[0,:,:] = np.array(4*[1024*[0xAAAAAAAA]], dtype=np.uint32)    
-    #     data[1,:,:] = np.array(4*[1024*[0x55555555]], dtype=np.uint32)    
-    #     data[2,:,:] = np.random.randint(0,np.power(2,32),(4,1024))
-    #     data[3,:,:] = np.random.randint(0,np.power(2,32),(4,1024))
-    #     
-    #     numOfGates = 256
-    #     self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["pv"]["last_row"].set_value(numOfGates-1)
-    #     self.sc.dhptRegister.JTAG_REGISTERS["CORE"]["dispatch"].set_value()    
-    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["sw_en_out"].set_value(1)
-    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
-    #     
-    #     for pattern_id in range(4):
-    #         self.sc.fill_switcher_memory(data[pattern_id])
-    #         dataRet = PROBECARD.get_switcherBits(numOfGates)
-    #         
-    #         wrong_data_row_id = []
-    #         if dataRet.shape == numOfGates:
-    #             for row in range(numOfGates):
-    #                 if (data[pattern_id,:,row] != dataRet[:,row]): 
-    #                     wrong_data_row_id.append(row) 
-    #         
-    #         logging.info("Wrong data in row:\n " + ", ".join(str(x) for x in wrong_data_row_id))
-    #         logging.info("Received pattern %x %x %x %x vs Expected pattern %x %x %x %x"%(dataRet[0,row], dataRet[1,row], dataRet[2,row], dataRet[3,row], data[pattern_id,0,row], data[i,1,row], data[pattern_id,2,row], data[pattern_id,3,row]))
-    #         isSwitcherOK = isSwitcherOK & (len(wrong_data_row_id) == 0)           
-    #     stop = time.time()
-    #     
-    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["sw_en_out"].set_value()
-    #     self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
-    #     if isSwitcherOK:
-    #         logging.info("I/O; Switcher Test passed after %d sec"%(stop-start))
-    #     else:
-    #         logging.warning("I/O; Switcher Test failed.")
-    #     
-    #===========================================================================
-        
-    def test_high_speed_link(self):
+
+    def analyze_data(self, refData, dataToAnalyze, isRaw=True):
+        if isRaw:
+            if np.all(refData==dataToAnalyze):
+                return True
+
+    def test_dcd_to_dhp_data(self, number_of_gates):
+        start = time.time()
+        # Every gate has the same 256bytes-random data
+        testpattern = PROBECARD.send_random_pattern_to_dhpt(number_of_gates)
+        filename = self.fileDir + "data"
+
+        data = daq.record_memorydump(1, framenr=1, dhePrefix=self.dhePrefix)
+        dcdData = self.analyze_data(testpattern, data)
+
+        stop = time.time()
+
+        if dcdData:
+            cmd = "I/O - DCD-DHPT data test passed after %d sec" %(stop - start)
+            return True, cmd
+        else:
+            cmd = "ERROR: I/O - DCD-DHPT data test failed after %d sec" % (stop - start)
+            return False, cmd
+
+    def test_dhp_to_dcd_offset_data(self, number_of_gates):
+        start = time.time()
+        offset_frame = np.random.randint(low=0, high=3, size=64 * 4 * number_of_gates).reshape(
+            (64, 4 * number_of_gates))
+        offset_lin = mapping.matrixToOffsetUpload(data_in=offset_frame, memIndex=0, shift=0)
+        upload_utils.upload_offsets(data=offset_lin, index=1, start_address=0, asic="DHPT", dheprefix=self.dhePrefix)
+
+        data = PROBECARD.get_offset_bits(number_of_gates)
+        dcd_data = self.analyze_data(offset_frame, data)
+        stop = time.time()
+
+        if dcd_data:
+            cmd = "I/O - DHP-DCD offset data test passed after %d sec" % (stop - start)
+            return True, cmd
+        else:
+            cmd = "ERROR: I/O - DHP-DCD offset data test failed after %d sec" % (stop - start)
+            return False, cmd
+
+    def test_dhp_to_switcher_data_normal_and_gated_mode(self, number_of_gates):
+        start = time.time()
+        switcher_normal_data = np.random.randint(low=0, high=1, size=32 * 4 * number_of_gates).reshape(
+            (number_of_gates, 4, 32))
+        switcher_gated_data = np.random.randint(low=0, high=1, size=32 * 4 * number_of_gates).reshape(
+            (number_of_gates, 4, 32))
+        upload_utils.upload_switcher_sequence(dheprefix=self.dhePrefix, asicpair=1, data=switcher_normal_data, sequence="main")
+        upload_utils.upload_switcher_sequence(dheprefix=self.dhePrefix, asicpair=1, data=switcher_gated_data, sequence="gated")
+        sw_data_normal = PROBECARD.get_switcher_bits(number_of_gates)
+
+        #TODO: ENABLE GATED MODE AND RECORD SW DATA
+        sw_data_gated = PROBECARD.get_switcher_bits(number_of_gates)
+
+        #TODO: DISABLE GATED MODE
+        sw_data = self.analyze_data(switcher_normal_data, sw_data_normal) and self.analyze_data(switcher_gated_data, sw_data_gated)
+        stop = time.time()
+
+        if sw_data:
+            cmd = "I/O - DHP-SW data test passed after %d sec" % (stop - start)
+            return True, cmd
+        else:
+            cmd = "ERROR: I/O - DHP-SW data test failed after %d sec" % (stop - start)
+            return False, cmd
+
+
+    def test_high_speed_link(self, configpath):
+        import configparser
         isHSOK = False
         '''
         Test High Speed Link Memory
         '''
         logging.info("HS; High Speed Link Test")
         start = time.time()
-        os.system("/home/lgermic/.cs-studio/analysis/aurora_optimization/aurora_scan.py")
-        os.system("/home/lgermic/.cs-studio/analysis/aurora_optimization/aurora_analyze.py")
+        os.system("/home/daq/lab_framework/calibrations/measure.py")
+        os.system("/home/daq/lab_framework/calibrations/analysis.py")
         '''
         TODO: aurora_analyze return if link stable and best bias parameters
         '''
-        linkUp = True
-        bias = [25,250,2]
-        
-        if linkUp:
-            self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["IDAC_CML_TX_BIAS"].set_value(bias[0])
-            self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["IDAC_CML_TX_BIASD"].set_value(bias[1])
-            self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["pv"]["pll_cml_dly_sel"].set_value(bias[2])
-            self.sc.dhptRegister.JTAG_REGISTERS["GLOBAL"]["dispatch"].set_value()
-            
+        config = configparser.ConfigParser(delimiters="=")
+        config.read(os.path.join(configpath, "measure.ini"))
+        user = config.get("general", "user")
+        opt = np.load(os.path.join(configpath, "analysis.npy"))
+        opt_dly = opt[pvname(user, self.dhePrefix, "D1", "pll_cml_dly_sel:VALUE:set")]
+        opt_bias = opt[pvname(user, self.dhePrefix, "D1", "idac_cml_tx_bias:VALUE:set")]
+        opt_biasd = opt[pvname(user, self.dhePrefix, "D1", "idac_cml_tx_biasd:VALUE:set")]
+
+        #set optimal values
+        self.dhp.regs['pll_cml_dly_sel:VALUE'] = opt_dly
+        self.dhp.regs['idac_cml_tx_bias:VALUE'] = opt_bias
+        self.dhp.regs['idac_cml_tx_biasd:VALUE'] = opt_biasd
+        self.dhp.write_global()
         stop = time.time()
-        
-        if linkUp:
-            logging.info("HS; High Speed Test passed after %d sec"%(stop-start))
-            isHSOK = True
+
+        if (opt_dly != 0) and (opt_bias != 0) and (opt_biasd != 0):
+            cmd = "HS - CML parameter test passed after %d sec" % (stop - start)
+            return True, cmd
         else:
-            logging.warning("HS; High Speed Test failed. No bias condition found.")
-    
-        return isHSOK
-    
-    def test_data_path(self):
-        pass
-    
-    def test_digital_processing(self):
-        pass
-    
+            cmd = "ERROR: HS - CML parameter test failed after %d sec" % (stop - start)
+            return False, cmd
+
+    def test_zero_suppressed_data(self):
+        from pyDepfetReader import FileReader
+        from daq import dhh_daq, record_zpdata_dhe
+        from tqdm import tqdm
+        import operator
+        from itertools import product
+        from shutil import copyfile
+        import os
+        import errno
+        import time
+        start = time.time()
+        def upload_pedestals(dhe, pedestals):
+            for a in [1]:
+                get_pv(dhe, "D%d:test_mode_en:S:set" % a).put(1)
+                get_pv(dhe, "D%d:cm_correction_en:S:set" % a).put(0)
+                get_pv(dhe, "D%d:pedestal_subtraction:S:set" % a).put(0)
+                get_pv(dhe, "D%d:threshold:VALUE:set" % a).put(19)
+                get_pv(dhe, "D%d:corereg:trg:set" % a).put(1)
+                upload_utils.upload_pedestal_frame(dhe, a, pedestals, memIndex=0, verbose=True)
+                upload_utils.upload_pedestal_frame(dhe, a, pedestals, memIndex=1, verbose=True)
+                upload_utils.upload_data_frame(dhe, a, pedestals, memIndex=0, verbose=True)
+
+        def checkEvent(RecEvent, dup):
+            if len(dup) == 0 and len(recEvents) == 0:
+                return True, None
+            if len(RecEvent) == 0:
+                return False, 'ERROR: Received no hits but expected some!'
+            recFrameNrs = np.unique(RecEvent[:, 4])
+            differenceOfFrameNumber = (RecEvent[-1, 4] - RecEvent[0, 4]) % (2 ** 16)  # - (recFrames[0]-x1)%overflow
+
+            if differenceOfFrameNumber > 1:
+                return False, 'ERROR: Difference of frame number: %d | Frame number: %s' % (
+                differenceOfFrameNumber, recFrameNrs)
+            else:
+                assert 1 <= len(recFrameNrs) <= 2
+                # Check content of frame one
+                drec = {(e[1], e[0], e[2]) for e in RecEvent}
+                # Check for monotonicity
+                for frameNr in recFrameNrs:
+                    linX = RecEvent[RecEvent[:, 4] == frameNr, 0] + 64 * RecEvent[RecEvent[:, 4] == frameNr, 1]
+                    if not np.all(linX[1:] - linX[0:-1] > 0):
+                        return False, 'ERROR: Received hits not in monotonic increasing order'
+
+                # Check if doublicate hits are present
+                if (len({(e[1], e[0]) for e in RecEvent}) - len(RecEvent)) != 0:
+                    return False, 'ERROR: Duplicated hit in data stream!'
+                # Check if all hits received
+                if not drec == dup:
+                    # print "got hits:",drec
+                    # print "expected",dup
+                    return False, 'ERROR: Missing hits or too many hits.'
+                if len(recFrameNrs) == 2:
+                    if RecEvent[0, 1] <= RecEvent[-1, 1]:
+                        # print "strange event:"
+                        # print RecEvent
+                        # print RecEvent[0,1],"vs", RecEvent[-1,1]
+                        return False, 'ERROR: First hit in first frame has lower row_id than the last hit of the second frame'
+            return True, None
+
+        dhe = self.dhePrefix
+        path = "results"
+        try:
+            os.makedirs(path)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
+
+        print dhe
+
+        '''
+        SET UP FILEREADER
+        '''
+        reader = FileReader(-1, 0, dhe)
+        reader.return_trigger = False
+        reader.return_dhc_trigger = False
+        reader.set_skip_raw(True)
+        reader.set_return_subevent_number(True)
+        reader.set_absolute_subevent_number(True)
+        pedestals = np.zeros((64, 64), np.uint8)
+
+        upload_pedestals(dhe=dhe, pedestals=pedestals)
+        # max number of hits in a row+1, starting with the last row, Maximum: 8!
+        l = [4, 3, 2, 1, 1]
+        for x in l:
+            assert x <= 9, "Too many hits in one row requested!"
+        upper_hits_old = None
+        totalErrors = 0
+        notExpectedErrors = 0
+        with open(os.path.join(path, "logfile.txt"), "w") as logfile:
+            with dhh_daq(dheprefix=dhe, wait=0, quiet=True, connectOnly=True) as writer:
+                '''
+                GENERATE TESTPATTERN
+                '''
+                pbar = tqdm(product(*map(xrange, l)), total=reduce(operator.mul, l))
+                for nr_per_row in pbar:
+                    n_gates = ((len(l) - 1) / 4 + 1)
+                    hits = np.zeros((n_gates * 4, 8), np.uint8)
+                    hit_set = set()
+                    setting_string = ",".join(map(str, nr_per_row))
+                    pbar.set_description("Setting " + setting_string + " Errors:%3d" % totalErrors)
+                    for row_from_last, n_row in enumerate(nr_per_row, start=1):
+                        for col in range(n_row):
+                            hits[-row_from_last, col] = 20 + (col * 3 + row_from_last * 7) % 200
+                            hit_set.add((64 - row_from_last, 16 + col, 20 + (col * 3 + row_from_last * 7) % 200))
+                    '''
+                    UPLOAD TESTPATTERN
+                    '''
+
+                    if (upper_hits_old is None) or np.any(hits[:, 4:] != upper_hits_old):
+                        # print "uploading other hits!", nr_per_row
+                        upper_hits_old = np.copy(hits[:, 4:])
+                        # print upper_hits_old
+                        upload_utils.upload_memory_slice(dhe, 1, upper_hits_old, 5, start_gate=16 - n_gates, pedestal_mem=False,
+                                            mem_index=0, verbose=False)
+                        upload_utils.upload_memory_slice(dhe, 1, hits[:, :4], 4, start_gate=16 - n_gates, pedestal_mem=False,
+                                        mem_index=0, verbose=False)
+                    time.sleep(0.04)
+                    '''
+                    TRIGGER DATA
+                    '''
+                    filenm = os.path.join(path, "temp.dat")
+                    record_zpdata_dhe(dhePrefix=dhe, art_trigger_freq=1000, filename=filenm, nr_art_triggers=40,
+                                      daq_instance=writer, verbose=False)
+                    '''
+                    CHECK RECEIVED DATA
+                    '''
+                    reader.open(filenm)
+
+                    for [recEvents] in reader:
+                        is_ok, msg = checkEvent(recEvents, hit_set)
+                        if not is_ok:
+                            totalErrors += 1
+                            if setting_string.split(",")[1] == 2:
+                                notExpectedErrors += 1
+                            newName = os.path.join(path, "bad" + setting_string + ".dat")
+                            copyfile(filenm, newName)
+                            logfile.write("Setting %s Bad. Reason: '%s'. File %s\n" % (setting_string, msg, newName))
+                            break
+                    else:
+                        logfile.write("Setting %s OK\n" % (setting_string))
+                    logfile.flush()
+
+        '''
+        LOG TEST
+        '''
+        stop = time.time()
+        if notExpectedErrors == 0:
+            cmd = "ZS - zero suppression test passed after %d sec" % (stop - start)
+            return True, cmd
+        else:
+            cmd = "ERROR: ZS - zero suppression test failed after %d sec" % (stop - start)
+            return False, cmd
+
+
+
     def CML_iv_curve(self):
         from argparse import ArgumentParser
         import configparser
         import epics_utils
-        import config_utils
         import time
         import numpy as np
         import os
         from daq import folder_for_data
         import shutil
         import matplotlib.pyplot as pl
-        import matplotlib as mpl
-        import sys
-        from math import sqrt
-        import matplotlib.ticker as tick
         from matplotlib.backends.backend_pdf import PdfPages
     
     
@@ -1013,16 +1188,12 @@ class DHPTMP(PROBECARD):
         from argparse import ArgumentParser
         import configparser
         import epics_utils
-        import config_utils
         import time
         import numpy as np
         import os
         from daq import folder_for_data
         import shutil
         import matplotlib.pyplot as pl
-        import matplotlib as mpl
-        import sys
-        from math import sqrt
         from matplotlib.backends.backend_pdf import PdfPages
     
     

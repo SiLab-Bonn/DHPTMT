@@ -281,7 +281,7 @@ assign {DO7_i,DO6_i,DO5_i,DO4_i,DO3_i,DO2_i,DO1_i,DO0_i} = DO_DATA;
 seq_gen #( .BASEADDR(SEQ_GEN_BASEADDR), 
 		   .HIGHADDR(SEQ_GEN_HIGHADDR),
 		   .ABUSWIDTH(32),
-		   .MEM_BYTES(16*1024), 
+		   .MEM_BYTES(32*1024),
 		   .OUT_BITS(256) 
 	) i_seq_gen
 (
@@ -304,7 +304,7 @@ assign DI_DATA = {DI7_i,DI6_i,DI5_i,DI4_i,DI3_i,DI2_i,DI1_i,DI0_i};
 seq_rec_off #( .BASEADDR(SEQ_REC_OFFSET_BASEADDR), 
 		   .HIGHADDR(SEQ_REC_OFFSET_HIGHADDR),
 		   .ABUSWIDTH(32),
-		   .MEM_BYTES(8*8*256), 
+		   .MEM_BYTES(8*256),
 		   .IN_BITS(64)
 	) i_seq_rec_offset
 (
@@ -326,7 +326,7 @@ assign SWITCHER_DATA = SW_DATA;
 seq_rec_sw #( .BASEADDR(SEQ_REC_SWITCHER_BASEADDR), 
 		   .HIGHADDR(SEQ_REC_SWITCHER_HIGHADDR),
 		   .ABUSWIDTH(32),
-		   .MEM_BYTES(2*8*256), 
+		   .MEM_BYTES(2*256),
 		   .IN_BITS(16)
 	) i_seq_rec_switcher
 	(
